@@ -1,0 +1,57 @@
+# =========================
+# Node / Package Managers
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Build / Dist
+# =========================
+dist/
+dist-ssr/
+build/
+out/
+
+# =========================
+# Environment Variables (SEGURANÇA)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Vercel
+# =========================
+.vercel/
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# OS / System Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =========================
+# Temporary / Cache
+# ====

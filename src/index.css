@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root{
+  --bg: 248 250 252;        /* slate-50 */
+  --surface: 255 255 255;   /* white */
+  --surface-2: 241 245 249; /* slate-100 */
+  --border: 226 232 240;    /* slate-200 */
+  --text: 15 23 42;         /* slate-900 */
+  --muted: 100 116 139;     /* slate-500 */
+
+  --primary: 96 37 129;     /* #602581 (seu roxo) */
+  --accent: 255 105 36;     /* #ff6924 (seu laranja) */
+
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(2,6,23,.08);
+}

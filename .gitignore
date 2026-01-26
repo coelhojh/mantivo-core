@@ -55,3 +55,8 @@ Thumbs.db
 # =========================
 # Temporary / Cache
 # ====
+
+# =========================
+# Incoming / Backup / Experimental
+# =========================
+_incoming/

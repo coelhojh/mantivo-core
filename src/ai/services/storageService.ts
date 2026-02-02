@@ -306,6 +306,7 @@ export const completeMaintenance = async (id: string, date: string, cost: number
         const nextDate = calculateNextDate(date, item.frequency_type as FrequencyType, item.frequency_days);
         
         const nextPayload = {
+            generated_from_id: id, // ✅ vínculo com o registro “pai”
             owner_id: item.owner_id,
             condo_id: item.condo_id,
             category: item.category,
@@ -336,19 +337,30 @@ export const completeMaintenance = async (id: string, date: string, cost: number
  * REVERTE A CONCLUSÃO DE UMA MANUTENÇÃO
  */
 export const undoCompleteMaintenance = async (id: string) => {
-    const supabase = getSupabase();
-    if (!supabase) return;
+  const supabase = getSupabase();
+  if (!supabase) return;
 
-    const { error } = await supabase.from('maintenances').update({ 
-        status: MaintenanceStatus.ON_TIME, 
-        last_execution_date: null,
-        cost: 0 
-    }).eq('id', id);
+  // 1) Apaga o(s) ciclo(s) gerados automaticamente a partir desta manutenção
+  const { error: deleteError } = await supabase
+    .from('maintenances')
+    .delete()
+    .eq('generated_from_id', id);
 
-    if (error) {
-        console.error("Erro ao desfazer conclusão:", error);
-        throw error;
-    }
+  if (deleteError) handleError(deleteError, 'undoCompleteMaintenance.deleteGenerated');
+
+  // 2) Reverte o registro original para "não concluída"
+  const { error: updateError } = await supabase
+    .from('maintenances')
+    .update({
+      status: MaintenanceStatus.ON_TIME,
+      last_execution_date: null,
+      cost: 0
+      // opcional: limpar anexos se você quiser voltar exatamente ao estado anterior
+      // attachments: []
+    })
+    .eq('id', id);
+
+  if (updateError) handleError(updateError, 'undoCompleteMaintenance.updateParent');
 };
 
 export const checkPlanLimits = async (type: string): Promise<boolean> => {

@@ -3,15 +3,46 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Maintenance, MaintenanceStatus, FrequencyType, MaintenanceType, Condo, Category, Provider, AttachmentType, MaintenanceAttachment } from '../types';
 import { getMaintenances, saveMaintenance, updateMaintenance, deleteMaintenance, completeMaintenance, undoCompleteMaintenance, getCondos, getCategories, checkPlanLimits, getUser, getProviders } from '../services/storageService';
 import { Plus, Search, Calendar, CheckCircle, Trash2, Edit2, X, Loader2, RotateCcw, LayoutList, Building, AlertTriangle, Clock, Columns, CheckSquare, AlertCircle, Wrench, Eye, Check, Filter, Timer, DollarSign, Briefcase, Info, AlignLeft, Paperclip, FileText, Upload, ChevronDown, ExternalLink, User as UserIcon, Phone, Mail } from 'lucide-react';
-import { format, isValid, differenceInDays, isAfter, isBefore, endOfDay } from 'date-fns';
+import { format, isValid, differenceInDays, isAfter, isBefore, endOfDay, parseISO as parseISODateFns } from 'date-fns';
 import UpgradeModal from './UpgradeModal';
 
-const parseISO = (dateStr: string | undefined | null): Date => {
+const parseDateOnly = (dateStr: string | undefined | null): Date => {
+
   if (!dateStr) return new Date(NaN);
   const parts = dateStr.split('-');
   if (parts.length !== 3) return new Date(NaN);
   return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 };
+
+const parseUploadDate = (dateStr: string | undefined | null): Date => {
+  if (!dateStr) return new Date(NaN);
+
+  // 1) ISO padrão (ex: 2026-02-01T12:30:00.000Z)
+  if (dateStr.includes('T')) {
+    try {
+      return parseISODateFns(dateStr);
+    } catch {
+      // continua o fluxo
+    }
+  }
+
+  // 2) Formato "yyyy-MM-dd HH:mm:ss" (com espaço)
+  // Ex: 2026-02-01 12:30:00
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(dateStr)) {
+    const normalized = dateStr.replace(' ', 'T');
+    try {
+      return parseISODateFns(normalized);
+    } catch {
+      // continua o fluxo
+    }
+  }
+
+  // 3) yyyy-MM-dd (ex: 2026-02-01)
+  const d = parseDateOnly(dateStr);
+  return d;
+};
+
+
 
 const startOfDayLocal = (d: Date) => {
   const newDate = new Date(d);
@@ -307,7 +338,8 @@ const MaintenanceList: React.FC = () => {
   const safeFormatDate = (dateStr: string | undefined | null) => {
     if (!dateStr) return '--/--/--';
     try {
-        const date = parseISO(dateStr);
+        const date = parseDateOnly(dateStr);
+
         return isValid(date) ? format(date, 'dd/MM/yy') : '--/--/--';
     } catch (e) {
         return '--/--/--';
@@ -336,7 +368,8 @@ const MaintenanceList: React.FC = () => {
 
   const getSimplifiedStatus = (item: Maintenance) => {
     if (item.status === MaintenanceStatus.COMPLETED) return "Concluída";
-    const diff = item.nextExecutionDate ? differenceInDays(parseISO(item.nextExecutionDate), new Date()) : 0;
+    const diff = item.nextExecutionDate ? differenceInDays(parseDateOnly(item.nextExecutionDate), new Date()) : 0;
+
     if (diff < 0) return "Vencida";
     return "A Vencer"; 
   };
@@ -354,13 +387,16 @@ const MaintenanceList: React.FC = () => {
         if (!item.nextExecutionDate) {
             matchesPeriod = false;
         } else {
-            const date = parseISO(item.nextExecutionDate);
+            const date = parseDateOnly(item.nextExecutionDate);
+
             if (filterStartDate) {
-                const start = startOfDayLocal(parseISO(filterStartDate));
+                const start = startOfDayLocal(parseDateOnly(filterStartDate));
+
                 if (isBefore(date, start)) matchesPeriod = false;
             }
             if (filterEndDate) {
-                const end = endOfDay(parseISO(filterEndDate));
+                const end = endOfDay(parseDateOnly(filterEndDate));
+
                 if (isAfter(date, end)) matchesPeriod = false;
             }
         }
@@ -505,6 +541,20 @@ const MaintenanceList: React.FC = () => {
                                                                   <Check size={13}/>
                                                               </button>
                                                           )}
+                                                          {canEdit && statusLabel === "Concluída" && (
+  <button
+    type="button"
+    onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    onClick={() => handleUndoComplete(item.id)}
+    disabled={isUndoing === item.id}
+    className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-all"
+    title="Desfazer Conclusão"
+  >
+    {isUndoing === item.id ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+  </button>
+)}
+
                                                           {canDelete && (
                                                               <button onClick={() => setItemToDelete(item)} className="p-1.5 text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100" title="Excluir">
                                                                   <Trash2 size={13}/>
@@ -630,21 +680,36 @@ const MaintenanceList: React.FC = () => {
                                                 </button>
                                             )}
                                             {canEdit && (
-                                                isCompleted ? (
-                                                  <button onClick={() => handleUndoComplete(item.id)} disabled={isUndoing === item.id} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all disabled:opacity-50 shadow-sm" title="Desfazer Conclusão">
-                                                      {isUndoing === item.id ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16}/>}
-                                                  </button>
-                                                ) : (
-                                                  <button onClick={() => handleOpenCompleteModal(item)} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all shadow-sm" title="Concluir">
-                                                      <Check size={16}/>
-                                                  </button>
-                                                )
-                                            )}
-                                            {canDelete && (
-                                                <button onClick={() => setItemToDelete(item)} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all shadow-sm" title="Excluir">
-                                                    <Trash2 size={16}/>
-                                                </button>
-                                            )}
+  isCompleted ? (
+    <button
+      type="button"
+      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onClick={() => handleUndoComplete(item.id)}
+      disabled={isUndoing === item.id}
+      className="relative z-30 p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-all shadow-sm"
+      title="Desfazer Conclusão"
+    >
+      {isUndoing === item.id ? (
+        <Loader2 size={16} className="animate-spin" />
+      ) : (
+        <RotateCcw size={16} />
+      )}
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={() => handleOpenCompleteModal(item)}
+      className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all shadow-sm"
+      title="Concluir"
+    >
+      <Check size={16} />
+    </button>
+  )
+)}
+
+
+                                            
                                         </div>
                                     </td>
                                 </tr>
@@ -949,7 +1014,15 @@ const MaintenanceList: React.FC = () => {
                                                             <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{doc.fileName}</p>
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md border ${getDocTypeColor(doc.type)}`}>{doc.type}</span>
-                                                                <span className="text-[9px] text-slate-400 font-bold flex items-center gap-1"><Clock size={10} /> {doc.uploadDate ? format(parseISO(doc.uploadDate), 'dd/MM/yy HH:mm') : format(new Date(), 'dd/MM/yy HH:mm')}</span>
+                                                               <span className="text-[9px] text-slate-400 font-bold flex items-center gap-1">
+  <Clock size={10} />
+  {(() => {
+    const d = parseUploadDate(doc.uploadDate);
+    return isValid(d) ? format(d, 'dd/MM/yy HH:mm') : '--/--/-- --:--';
+  })()}
+</span>
+
+
                                                             </div>
                                                         </div>
                                                     </div>

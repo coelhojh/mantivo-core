@@ -127,6 +127,8 @@ export interface Maintenance {
   nextExecutionDate: string;
   status: MaintenanceStatus;
   attachments: MaintenanceAttachment[];
+  generatedFromId?: string | null;
+
 }
 
 export const PLAN_LIMITS = {

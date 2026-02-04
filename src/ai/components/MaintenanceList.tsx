@@ -1058,137 +1058,156 @@ const MaintenanceList: React.FC = () => {
         )}
       </div>
 
-      {/* MODAL VIEW */}
-      {showViewModal && itemToView && (() => {
-        const s3 = getStatus3(itemToView, new Date());
-        const dotClass =
-          s3 === "OVERDUE" ? "bg-red-500" : s3 === "COMPLETED" ? "bg-emerald-500" : "bg-blue-500";
+            {/* MODAL VIEW (refatorado com BaseModal) */}
+      <BaseModal
+        open={!!showViewModal && !!itemToView}
+        onClose={() => setShowViewModal(false)}
+        title={itemToView?.title || "Visualizar manutenção"}
+        subtitle="Visualização de registro"
+        icon={<Eye size={22} />}
+        maxWidthClass="max-w-2xl"
+        zIndexClass="z-[80]"
+        footer={
+          <div className="flex justify-end gap-3">
+            {canEdit && itemToView && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowViewModal(false);
+                  handleOpenModal(itemToView);
+                }}
+                className="px-6 py-4 bg-blue-50 text-blue-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-blue-100 transition-all flex items-center gap-2"
+              >
+                <Edit2 size={14} /> Editar Registro
+              </button>
+            )}
 
-        return (
-          <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[80] p-4 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center shadow-inner">
-                    <Eye size={24} />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-2xl font-bold text-slate-900 tracking-tight truncate">{itemToView.title}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded border ${getTypeClasses(itemToView.type)}`}>
-                        {itemToView.type}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">Visualização de registro</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowViewModal(false)}
-                  className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 text-slate-400 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+            <button
+              type="button"
+              onClick={() => setShowViewModal(false)}
+              className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-slate-200"
+            >
+              Fechar
+            </button>
+          </div>
+        }
+      >
+        {itemToView && (() => {
+          const s3 = getStatus3(itemToView, new Date());
 
-              <div className="p-8 overflow-y-auto space-y-8 scrollbar-thin scrollbar-thumb-slate-200 bg-slate-50/30">
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                    1. Informações Gerais
-                  </h4>
+          const dotClass =
+            s3 === "OVERDUE"
+              ? "bg-red-500"
+              : s3 === "COMPLETED"
+              ? "bg-emerald-500"
+              : "bg-blue-500";
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                        Condomínio
-                      </label>
-                      <p className="text-sm font-semibold text-slate-800">
-                        {condos.find((c) => c.id === itemToView.condoId)?.name || "N/A"}
-                      </p>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                        Categoria
-                      </label>
-                      <p className="text-sm font-semibold text-slate-800">{itemToView.category}</p>
-                    </div>
-
-                    <div className="md:col-span-2 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                        Status Operacional
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${dotClass}`} />
-                        <p className="text-sm font-semibold text-slate-800">{STATUS3_LABEL[s3]}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* restante do modal view mantém sua estrutura original */}
-                {/* ... (mantive o restante do seu modal igual, pois não afeta o status padronizado) ... */}
-
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                    2. Datas e Ciclo
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                        Próximo Vencimento
-                      </label>
-                      <p className={`text-sm font-semibold ${s3 === "OVERDUE" ? "text-red-600" : "text-slate-800"}`}>
-                        {safeFormatDate(itemToView.nextExecutionDate)}
-                      </p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                        Última Execução
-                      </label>
-                      <p className="text-sm font-semibold text-emerald-600">
-                        {safeFormatDate(itemToView.lastExecutionDate)}
-                      </p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2 md:col-span-1">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                        Frequência
-                      </label>
-                      <p className="text-sm font-semibold text-slate-800">
-                        {itemToView.type === MaintenanceType.CORRECTIVE
-                          ? "—"
-                          : `${itemToView.frequencyType} ${itemToView.frequencyDays ? `(${itemToView.frequencyDays}d)` : ""}`}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-8 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
-                {canEdit && (
-                  <button
-                    onClick={() => {
-                      setShowViewModal(false);
-                      handleOpenModal(itemToView);
-                    }}
-                    className="px-6 py-4 bg-blue-50 text-blue-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-blue-100 transition-all flex items-center gap-2"
+          return (
+            <div className="space-y-8">
+              {/* Bloco: Cabeçalho informativo */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-[9px] font-bold uppercase px-2 py-1 rounded border ${getTypeClasses(
+                      itemToView.type
+                    )}`}
                   >
-                    <Edit2 size={14} /> Editar Registro
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowViewModal(false)}
-                  className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-slate-200"
-                >
-                  Fechar
-                </button>
+                    {itemToView.type}
+                  </span>
+
+                  <span
+                    className="text-[10px] font-bold px-2 py-1 rounded-full ring-1 ring-black/5"
+                    style={{
+                      background:
+                        s3 === "ON_TIME"
+                          ? "rgb(var(--primary) / 0.10)"
+                          : s3 === "OVERDUE"
+                          ? "rgb(var(--danger) / 0.10)"
+                          : "rgb(var(--success) / 0.10)",
+                      color: STATUS3_COLOR_TOKEN[s3],
+                    }}
+                  >
+                    {STATUS3_LABEL[s3]}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
+                      Condomínio
+                    </label>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {condos.find((c) => c.id === itemToView.condoId)?.name || "N/A"}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
+                      Categoria
+                    </label>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {itemToView.category || "—"}
+                    </p>
+                  </div>
+
+                  <div className="md:col-span-2 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
+                      Status Operacional
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${dotClass}`} />
+                      <p className="text-sm font-semibold text-slate-800">
+                        {STATUS3_LABEL[s3]}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloco: Datas e ciclo */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                  Datas e ciclo
+                </h4>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
+                      Próximo vencimento
+                    </label>
+                    <p className={`text-sm font-semibold ${s3 === "OVERDUE" ? "text-red-600" : "text-slate-800"}`}>
+                      {safeFormatDate(itemToView.nextExecutionDate)}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
+                      Última execução
+                    </label>
+                    <p className="text-sm font-semibold text-emerald-600">
+                      {safeFormatDate(itemToView.lastExecutionDate)}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2 md:col-span-1">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
+                      Frequência
+                    </label>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {itemToView.type === MaintenanceType.CORRECTIVE
+                        ? "—"
+                        : `${itemToView.frequencyType} ${
+                            itemToView.frequencyDays ? `(${itemToView.frequencyDays}d)` : ""
+                          }`}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
+      </BaseModal>
 
-      {/* TODO: Mantive seus outros modais (create/edit/complete/delete) como estavam.
-          Eles não dependem do status padronizado, então não mexi para não arriscar regressão. */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">

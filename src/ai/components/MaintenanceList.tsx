@@ -126,6 +126,42 @@ const DOC_TYPE_PRIORITY: Record<string, number> = {
   [AttachmentType.CERTIFICATE]: 5,
   [AttachmentType.OTHER]: 6,
 };
+// --- Attachment tag helpers ---
+
+const attachmentTypeLabel: Record<AttachmentType, string> = {
+  [AttachmentType.BUDGET]: "Orçamento",
+  [AttachmentType.INVOICE]: "Nota fiscal",
+  [AttachmentType.ART_RRT]: "ART/RRT",
+  [AttachmentType.SERVICE_ORDER]: "Ordem de Serviço",
+  [AttachmentType.PHOTOS]: "Fotos",
+  [AttachmentType.TECHNICAL_REPORT]: "Laudo",
+  [AttachmentType.MAINTENANCE_REPORT]: "Relatório",
+  [AttachmentType.CERTIFICATE]: "Certificado",
+  [AttachmentType.OTHER]: "Outro",
+};
+
+const attachmentTypeClass: Record<AttachmentType, string> = {
+  [AttachmentType.BUDGET]: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  [AttachmentType.INVOICE]: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+  [AttachmentType.ART_RRT]: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  [AttachmentType.SERVICE_ORDER]: "bg-fuchsia-50 text-fuchsia-700 ring-1 ring-fuchsia-200",
+  [AttachmentType.PHOTOS]: "bg-lime-50 text-lime-700 ring-1 ring-lime-200",
+  [AttachmentType.TECHNICAL_REPORT]: "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
+  [AttachmentType.MAINTENANCE_REPORT]: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
+  [AttachmentType.CERTIFICATE]: "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
+  [AttachmentType.OTHER]: "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+};
+
+function AttachmentTag({ type }: { type: AttachmentType }) {
+  const label = attachmentTypeLabel[type] ?? "Anexo";
+  const cls = attachmentTypeClass[type] ?? attachmentTypeClass[AttachmentType.OTHER];
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${cls}`}>
+      {label}
+    </span>
+  );
+}
 
 const MaintenanceList: React.FC = () => {
   const [items, setItems] = useState<Maintenance[]>([]);
@@ -146,6 +182,8 @@ const MaintenanceList: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showUndoModal, setShowUndoModal] = useState(false);
+  const [itemToUndo, setItemToUndo] = useState<Maintenance | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Maintenance | null>(null);
   const [itemToComplete, setItemToComplete] = useState<Maintenance | null>(null);
@@ -262,19 +300,32 @@ const MaintenanceList: React.FC = () => {
   };
 
   const handleUndoComplete = async (id: string) => {
-    if (isUndoing) return;
-    if (!window.confirm("Deseja desfazer a conclusão desta manutenção?")) return;
+  // Em vez de confirmar aqui, apenas abre o modal
+  const item = filteredItems.find((m) => m.id === id);
+  if (!item) return;
 
-    setIsUndoing(id);
-    try {
-      await undoCompleteMaintenance(id);
-      await refreshData();
-    } catch (e) {
-      alert("Erro ao desfazer conclusão.");
-    } finally {
-      setIsUndoing(null);
-    }
-  };
+  setItemToUndo(item);
+  setShowUndoModal(true);
+};
+
+
+const handleConfirmUndo = async () => {
+  if (!itemToUndo) return;
+  if (isUndoing) return;
+
+  setIsUndoing(itemToUndo.id);
+  try {
+    await undoCompleteMaintenance(itemToUndo.id);
+    await refreshData();
+
+    setShowUndoModal(false);
+    setItemToUndo(null);
+  } catch (e) {
+    alert("Erro ao desfazer conclusão.");
+  } finally {
+    setIsUndoing(null);
+  }
+};
 
   const handleProviderChange = (providerId: string) => {
     const selected = providers.find((p) => p.id === providerId);
@@ -601,7 +652,8 @@ const MaintenanceList: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4 shrink-0">
+      <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-4
+ border border-slate-200 flex flex-col gap-4 shrink-0">
         <div className="flex flex-col md:flex-row gap-4 justify-between">
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <div className="relative flex-1 min-w-[200px]">
@@ -668,11 +720,11 @@ const MaintenanceList: React.FC = () => {
         {showFilters && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 animate-in slide-in-from-top-2 duration-200">
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                 Status
               </label>
               <select
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
               >
@@ -684,11 +736,11 @@ const MaintenanceList: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                 Tipo
               </label>
               <select
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
               >
@@ -699,24 +751,24 @@ const MaintenanceList: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                 Período De
               </label>
               <input
                 type="date"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
                 value={filterStartDate}
                 onChange={(e) => setFilterStartDate(e.target.value)}
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                 Período Até
               </label>
               <input
                 type="date"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
                 value={filterEndDate}
                 onChange={(e) => setFilterEndDate(e.target.value)}
               />
@@ -1025,7 +1077,7 @@ const MaintenanceList: React.FC = () => {
                               type="button"
                               onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                               onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                              onClick={() => handleUndoComplete(item.id)}
+                             onClick={() => handleUndoComplete(item.id)}
                               disabled={isUndoing === item.id}
                               className="relative z-30 p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-all shadow-sm"
                               title="Desfazer Conclusão"
@@ -1058,420 +1110,239 @@ const MaintenanceList: React.FC = () => {
         )}
       </div>
 
-            {/* MODAL VIEW (refatorado com BaseModal) */}
-      <BaseModal
-        open={!!showViewModal && !!itemToView}
-        onClose={() => setShowViewModal(false)}
-        title={itemToView?.title || "Visualizar manutenção"}
-        subtitle="Visualização de registro"
-        icon={<Eye size={22} />}
-        maxWidthClass="max-w-2xl"
-        zIndexClass="z-[80]"
-        footer={
-          <div className="flex justify-end gap-3">
-            {canEdit && itemToView && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowViewModal(false);
-                  handleOpenModal(itemToView);
-                }}
-                className="px-6 py-4 bg-blue-50 text-blue-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-blue-100 transition-all flex items-center gap-2"
-              >
-                <Edit2 size={14} /> Editar Registro
-              </button>
-            )}
+      {/* MODAL VIEW (novo – layout de leitura, UX premium) */}
+{showViewModal && itemToView && (
+  <BaseModal
+    open={!!showViewModal && !!itemToView}
+    onClose={() => setShowViewModal(false)}
+    title="Visualizar manutenção"
+    subtitle="Somente leitura"
+    icon={<Eye size={18} className="text-slate-600" />}
+    maxWidthClass="max-w-4xl"
+    zIndexClass="z-[80]"
+    footer={
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={() => setShowViewModal(false)}
+          className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+        >
+          Fechar
+        </button>
 
-            <button
-              type="button"
-              onClick={() => setShowViewModal(false)}
-              className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-slate-200"
-            >
-              Fechar
-            </button>
-          </div>
-        }
-      >
-        {itemToView && (() => {
-          const s3 = getStatus3(itemToView, new Date());
-
-          const dotClass =
-            s3 === "OVERDUE"
-              ? "bg-red-500"
-              : s3 === "COMPLETED"
-              ? "bg-emerald-500"
-              : "bg-blue-500";
-
-          return (
-            <div className="space-y-8">
-              {/* Bloco: Cabeçalho informativo */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[9px] font-bold uppercase px-2 py-1 rounded border ${getTypeClasses(
-                      itemToView.type
-                    )}`}
-                  >
-                    {itemToView.type}
-                  </span>
-
-                  <span
-                    className="text-[10px] font-bold px-2 py-1 rounded-full ring-1 ring-black/5"
-                    style={{
-                      background:
-                        s3 === "ON_TIME"
-                          ? "rgb(var(--primary) / 0.10)"
-                          : s3 === "OVERDUE"
-                          ? "rgb(var(--danger) / 0.10)"
-                          : "rgb(var(--success) / 0.10)",
-                      color: STATUS3_COLOR_TOKEN[s3],
-                    }}
-                  >
-                    {STATUS3_LABEL[s3]}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                      Condomínio
-                    </label>
-                    <p className="text-sm font-semibold text-slate-800">
-                      {condos.find((c) => c.id === itemToView.condoId)?.name || "N/A"}
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                      Categoria
-                    </label>
-                    <p className="text-sm font-semibold text-slate-800">
-                      {itemToView.category || "—"}
-                    </p>
-                  </div>
-
-                  <div className="md:col-span-2 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                      Status Operacional
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${dotClass}`} />
-                      <p className="text-sm font-semibold text-slate-800">
-                        {STATUS3_LABEL[s3]}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bloco: Datas e ciclo */}
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                  Datas e ciclo
-                </h4>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                      Próximo vencimento
-                    </label>
-                    <p className={`text-sm font-semibold ${s3 === "OVERDUE" ? "text-red-600" : "text-slate-800"}`}>
-                      {safeFormatDate(itemToView.nextExecutionDate)}
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                      Última execução
-                    </label>
-                    <p className="text-sm font-semibold text-emerald-600">
-                      {safeFormatDate(itemToView.lastExecutionDate)}
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2 md:col-span-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">
-                      Frequência
-                    </label>
-                    <p className="text-sm font-semibold text-slate-800">
-                      {itemToView.type === MaintenanceType.CORRECTIVE
-                        ? "—"
-                        : `${itemToView.frequencyType} ${
-                            itemToView.frequencyDays ? `(${itemToView.frequencyDays}d)` : ""
-                          }`}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-      </BaseModal>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
-                  <Wrench size={24} />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
-                    {editingId ? "Editar Manutenção" : "Nova Manutenção"}
-                  </h3>
-                  <p className="text-sm text-slate-500 font-medium">Gestão de cronograma e recorrência.</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 text-slate-400 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-8 overflow-y-auto space-y-8 scrollbar-thin scrollbar-thumb-slate-200">
-              <form id="maintenanceForm" onSubmit={handleSave} className="space-y-8 font-sans">
-                {/* Campos principais */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div className="md:col-span-2">
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Título *
-    </label>
-    <input
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-      value={formData.title ?? ""}
-      onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
-      placeholder="Ex.: Limpeza da caixa d’água"
-      required
-    />
-  </div>
-
-  <div>
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Condomínio *
-    </label>
-    <select
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-      value={formData.condoId ?? ""}
-      onChange={(e) => setFormData((p) => ({ ...p, condoId: e.target.value }))}
-      required
-    >
-      <option value="" disabled>
-        Selecione…
-      </option>
-      {condos.map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.name}
-        </option>
-      ))}
-    </select>
-  </div>
-
-  <div>
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Categoria *
-    </label>
-    <select
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-      value={formData.category ?? ""}
-      onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value }))}
-      required
-    >
-      <option value="" disabled>
-        Selecione…
-      </option>
-      {categories.map((c: any) => (
-        <option key={c.id ?? c.name} value={c.name ?? c.id}>
-          {c.name ?? c.id}
-        </option>
-      ))}
-    </select>
-  </div>
-
-  <div>
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Tipo *
-    </label>
-    <select
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-      value={(formData.type as any) ?? ""}
-      onChange={(e) => setFormData((p) => ({ ...p, type: e.target.value as any }))}
-      required
-    >
-      <option value="" disabled>
-        Selecione…
-      </option>
-      <option value={MaintenanceType.PREVENTIVE}>Preventiva</option>
-      <option value={MaintenanceType.CORRECTIVE}>Corretiva</option>
-    </select>
-  </div>
-
-  <div>
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Próximo vencimento *
-    </label>
-    <input
-      type="date"
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-      value={(formData.nextExecutionDate as any) ?? ""}
-      onChange={(e) => setFormData((p) => ({ ...p, nextExecutionDate: e.target.value }))}
-      required
-    />
-  </div>
-
-  <div>
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Custo estimado
-    </label>
-    <input
-      inputMode="numeric"
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-      value={String(Math.round(((formData.estimatedCost as any) ?? 0) * 100)).replace(/\B(?=(\d{3})+(?!\d))/g, "")}
-      onChange={(e) => handleCurrencyInputChange(e, (val) => setFormData((p) => ({ ...p, estimatedCost: val })))}
-      placeholder="0"
-    />
-    <p className="mt-1 text-[11px] text-slate-400">Dica: digite somente números.</p>
-  </div>
-
-  {/* Frequência: escondida/ajustada quando Corretiva */}
-  <div>
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Frequência
-    </label>
-    <select
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium disabled:bg-slate-50"
-      value={(formData.frequencyType as any) ?? FrequencyType.MONTHLY}
-      onChange={(e) => setFormData((p) => ({ ...p, frequencyType: e.target.value as any }))}
-      disabled={isCorrective}
-    >
-      <option value={FrequencyType.DAILY}>Diária</option>
-      <option value={FrequencyType.WEEKLY}>Semanal</option>
-      <option value={FrequencyType.MONTHLY}>Mensal</option>
-      <option value={FrequencyType.YEARLY}>Anual</option>
-      <option value={FrequencyType.CUSTOM}>Custom</option>
-    </select>
-  </div>
-
-  <div>
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Intervalo (dias)
-    </label>
-    <input
-      type="number"
-      min={0}
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium disabled:bg-slate-50"
-      value={(formData.frequencyDays as any) ?? 0}
-      onChange={(e) => setFormData((p) => ({ ...p, frequencyDays: Number(e.target.value || 0) }))}
-      disabled={isCorrective}
-    />
-  </div>
-
-  {/* Fornecedor */}
-  <div className="md:col-span-2">
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Prestador
-    </label>
-    <select
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-      value={formData.providerId ?? ""}
-      onChange={(e) => handleProviderChange(e.target.value)}
-    >
-      <option value="">(Sem prestador)</option>
-      {providers.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.name}
-        </option>
-      ))}
-    </select>
-
-    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-      <input
-        className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-        value={formData.providerContact ?? ""}
-        onChange={(e) => setFormData((p) => ({ ...p, providerContact: e.target.value }))}
-        placeholder="Contato"
-      />
-      <input
-        className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium"
-        value={formData.providerPhone ?? ""}
-        onChange={(e) => setFormData((p) => ({ ...p, providerPhone: e.target.value }))}
-        placeholder="Telefone/WhatsApp"
-      />
-      <input
-        className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium md:col-span-2"
-        value={formData.providerEmail ?? ""}
-        onChange={(e) => setFormData((p) => ({ ...p, providerEmail: e.target.value }))}
-        placeholder="E-mail"
-      />
-    </div>
-  </div>
-
-  {/* Anexos */}
-  <div className="md:col-span-2">
-    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-      Anexos
-    </label>
-
-    <div className="flex flex-col md:flex-row gap-3">
-      <select
-        className="border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium md:w-64"
-        value={selectedFileType}
-        onChange={(e) => setSelectedFileType(e.target.value)}
-      >
-        <option value={AttachmentType.BUDGET}>Orçamento</option>
-        <option value={AttachmentType.INVOICE}>Nota fiscal</option>
-        <option value={AttachmentType.ART_RRT}>ART/RRT</option>
-        <option value={AttachmentType.TECHNICAL_REPORT}>Laudo técnico</option>
-        <option value={AttachmentType.MAINTENANCE_REPORT}>Relatório manutenção</option>
-        <option value={AttachmentType.CERTIFICATE}>Certificado</option>
-        <option value={AttachmentType.OTHER}>Outros</option>
-      </select>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white"
-        onChange={(e) => handleFileUpload(e, false)}
-      />
-    </div>
-
-    {!!(formData.attachments?.length) && (
-      <div className="mt-3 space-y-2">
-        {(formData.attachments || []).map((a, idx) => (
-          <div
-            key={`${a.fileName}-${idx}`}
-            className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2"
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => {
+              setShowViewModal(false);
+              handleOpenModal(itemToView);
+            }}
+            className="px-6 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 shadow-sm"
           >
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-700 truncate">{a.fileName}</p>
-              <p className="text-[11px] text-slate-400 font-bold uppercase">{a.type}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => removeAttachment(idx, false)}
-              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-100"
-              title="Remover anexo"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
+            Editar
+          </button>
+        )}
       </div>
-    )}
-  </div>
-</div>
+    }
+  >
+    {(() => {
+      const s3 = getStatus3(itemToView, new Date());
 
-              </form>
+      const statusChipClass =
+        s3 === "OVERDUE"
+          ? "bg-rose-50 text-rose-700 ring-rose-200"
+          : s3 === "COMPLETED"
+          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          : "bg-blue-50 text-blue-700 ring-blue-200";
+
+      const typeChipClass = getTypeClasses(itemToView.type);
+
+      // URL do anexo (sem quebrar se não existir)
+      const getAttachmentUrl = (a: any) =>
+        a?.url || a?.publicUrl || a?.downloadUrl || a?.signedUrl || a?.path || "";
+
+      return (
+        <div className="space-y-4">
+          {/* CABEÇALHO / CHIPS */}
+          <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 truncate">
+                  {itemToView.title}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Visualização detalhada do registro (sem edição).
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${typeChipClass}`}
+                  title="Tipo"
+                >
+                  {itemToView.type}
+                </span>
+
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${statusChipClass}`}
+                  title="Status operacional"
+                >
+                  {STATUS3_LABEL[s3]}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* GRID PRINCIPAL */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* BLOCO: Identificação */}
+            <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-5">
+              <p className="text-xs font-semibold text-slate-700 mb-3">Identificação</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Condomínio
+                  </p>
+                  <p className="text-sm text-slate-800 mt-1">
+                    {condos.find((c) => c.id === itemToView.condoId)?.name || "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Categoria
+                  </p>
+                  <p className="text-sm text-slate-800 mt-1">
+                    {itemToView.category || "—"}
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Status operacional
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">
+                    {STATUS3_LABEL[s3]}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="p-8 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
+            {/* BLOCO: Datas e ciclo */}
+            <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-5">
+              <p className="text-xs font-semibold text-slate-700 mb-3">Datas e ciclo</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Próximo vencimento
+                  </p>
+                  <p className={`text-sm font-semibold mt-1 ${s3 === "OVERDUE" ? "text-rose-700" : "text-slate-800"}`}>
+                    {safeFormatDate(itemToView.nextExecutionDate)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Última execução
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">
+                    {safeFormatDate(itemToView.lastExecutionDate)}
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Frequência
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">
+                    {itemToView.type === MaintenanceType.CORRECTIVE
+                      ? "—"
+                      : `${itemToView.frequencyType} ${
+                          itemToView.frequencyDays ? `(${itemToView.frequencyDays}d)` : ""
+                        }`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ANEXOS */}
+          <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-slate-700">Anexos</p>
+              <span className="text-xs text-slate-500">
+                {(itemToView.attachments?.length ?? 0)} arquivo(s)
+              </span>
+            </div>
+
+            {itemToView.attachments?.length ? (
+              <div className="mt-4 space-y-2">
+                {itemToView.attachments.map((a: any, idx: number) => {
+                  const url = getAttachmentUrl(a);
+                  return (
+                    <div
+                      key={`${a.fileName}-${idx}`}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">
+                          {a.fileName}
+                        </p>
+                        <div className="mt-1">
+                          <AttachmentTag type={a.type as AttachmentType} />
+                        </div>
+                      </div>
+
+                      {url ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold"
+                          title="Abrir anexo"
+                        >
+                          Abrir
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">sem link</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-600">Nenhum anexo cadastrado.</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Dica: anexe fotos, NF, laudos e ordem de serviço.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    })()}
+  </BaseModal>
+)}
+
+
+            {showModal && (
+        <BaseModal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          title={editingId ? "Editar manutenção" : "Nova manutenção"}
+          subtitle="Gestão de cronograma e recorrência"
+          icon={<Wrench size={18} className="text-blue-600" />}
+          maxWidthClass="max-w-4xl"
+          zIndexClass="z-[60]"
+          footer={
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-6 py-4 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-800 transition-colors"
+                className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition"
               >
                 Cancelar
               </button>
@@ -1479,66 +1350,560 @@ const MaintenanceList: React.FC = () => {
               <button
                 type="submit"
                 form="maintenanceForm"
-                className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-semibold text-xs uppercase tracking-wider shadow-xl hover:bg-blue-700 active:scale-95 transition-all shadow-blue-100"
+                className="px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm active:scale-[0.99] transition"
               >
-                {editingId ? "Atualizar" : "Criar Manutenção"}
+                {editingId ? "Atualizar" : "Criar manutenção"}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <form id="maintenanceForm" onSubmit={handleSave} className="space-y-8 font-sans">
+            {/* Campos principais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Título *
+                </label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                  value={formData.title ?? ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="Ex.: Limpeza da caixa d’água"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Condomínio *
+                </label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                  value={formData.condoId ?? ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, condoId: e.target.value }))}
+                  required
+                >
+                  <option value="" disabled>
+                    Selecione…
+                  </option>
+                  {condos.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Categoria *
+                </label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                  value={formData.category ?? ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value }))}
+                  required
+                >
+                  <option value="" disabled>
+                    Selecione…
+                  </option>
+                  {categories.map((c: any) => (
+                    <option key={c.id ?? c.name} value={c.name ?? c.id}>
+                      {c.name ?? c.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Tipo *
+                </label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                  value={(formData.type as any) ?? ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, type: e.target.value as any }))}
+                  required
+                >
+                  <option value="" disabled>
+                    Selecione…
+                  </option>
+                  <option value={MaintenanceType.PREVENTIVE}>Preventiva</option>
+                  <option value={MaintenanceType.CORRECTIVE}>Corretiva</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Próximo vencimento *
+                </label>
+                <input
+                  type="date"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                  value={(formData.nextExecutionDate as any) ?? ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, nextExecutionDate: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Custo estimado
+                </label>
+                <input
+                  inputMode="numeric"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                  value={String(Math.round(((formData.estimatedCost as any) ?? 0) * 100)).replace(
+                    /\B(?=(\d{3})+(?!\d))/g,
+                    ""
+                  )}
+                  onChange={(e) =>
+                    handleCurrencyInputChange(e, (val) =>
+                      setFormData((p) => ({ ...p, estimatedCost: val }))
+                    )
+                  }
+                  placeholder="0"
+                />
+                <p className="mt-1 text-[11px] text-slate-400">Dica: digite somente números.</p>
+              </div>
+
+              {/* Frequência: escondida/ajustada quando Corretiva */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Frequência
+                </label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition disabled:bg-slate-50"
+                  value={(formData.frequencyType as any) ?? FrequencyType.MONTHLY}
+                  onChange={(e) => setFormData((p) => ({ ...p, frequencyType: e.target.value as any }))}
+                  disabled={isCorrective}
+                >
+                  <option value={FrequencyType.DAILY}>Diária</option>
+                  <option value={FrequencyType.WEEKLY}>Semanal</option>
+                  <option value={FrequencyType.MONTHLY}>Mensal</option>
+                  <option value={FrequencyType.YEARLY}>Anual</option>
+                  <option value={FrequencyType.CUSTOM}>Custom</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Intervalo (dias)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition disabled:bg-slate-50"
+                  value={(formData.frequencyDays as any) ?? 0}
+                  onChange={(e) => setFormData((p) => ({ ...p, frequencyDays: Number(e.target.value || 0) }))}
+                  disabled={isCorrective}
+                />
+              </div>
+
+              {/* Fornecedor */}
+              <div className="md:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Prestador
+                </label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                  value={formData.providerId ?? ""}
+                  onChange={(e) => handleProviderChange(e.target.value)}
+                >
+                  <option value="">(Sem prestador)</option>
+                  {providers.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                    value={formData.providerContact ?? ""}
+                    onChange={(e) => setFormData((p) => ({ ...p, providerContact: e.target.value }))}
+                    placeholder="Contato"
+                  />
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition"
+                    value={formData.providerPhone ?? ""}
+                    onChange={(e) => setFormData((p) => ({ ...p, providerPhone: e.target.value }))}
+                    placeholder="Telefone/WhatsApp"
+                  />
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition md:col-span-2"
+                    value={formData.providerEmail ?? ""}
+                    onChange={(e) => setFormData((p) => ({ ...p, providerEmail: e.target.value }))}
+                    placeholder="E-mail"
+                  />
+                </div>
+              </div>
+
+              {/* Anexos */}
+              <div className="md:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Anexos
+                </label>
+
+                <div className="flex flex-col md:flex-row gap-3">
+                  <select
+                    className="border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white font-medium md:w-64"
+                    value={selectedFileType}
+                    onChange={(e) => setSelectedFileType(e.target.value)}
+                  >
+                    <option value={AttachmentType.BUDGET}>Orçamento</option>
+                    <option value={AttachmentType.INVOICE}>Nota fiscal</option>
+                    <option value={AttachmentType.ART_RRT}>ART/RRT</option>
+                    <option value={AttachmentType.TECHNICAL_REPORT}>Laudo técnico</option>
+                    <option value={AttachmentType.MAINTENANCE_REPORT}>Relatório manutenção</option>
+                    <option value={AttachmentType.CERTIFICATE}>Certificado</option>
+                    <option value={AttachmentType.OTHER}>Outros</option>
+                  </select>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm bg-white"
+                    onChange={(e) => handleFileUpload(e, false)}
+                  />
+                </div>
+
+                {!!(formData.attachments?.length) && (
+                  <div className="mt-3 space-y-2">
+                    {(formData.attachments || []).map((a, idx) => (
+                      <div
+                        key={`${a.fileName}-${idx}`}
+                        className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-700 truncate">{a.fileName}</p>
+                          <p className="text-[11px] text-slate-400 font-bold uppercase">{a.type}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(idx, false)}
+                          className="p-2 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-100"
+                          title="Remover anexo"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </form>
+        </BaseModal>
       )}
 
       {showCompleteModal && itemToComplete && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[70] p-4 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
-            {/* --- SEU MODAL COMPLETE ORIGINAL (sem alterações) --- */}
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner">
-                  <CheckCircle size={24} />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Concluir Manutenção</h3>
-                  <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">{itemToComplete.title}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowCompleteModal(false)}
-                className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 text-slate-400 transition-colors"
-              >
-                <X size={20} />
-              </button>
+  <BaseModal
+    open={showCompleteModal}
+    onClose={() => setShowCompleteModal(false)}
+    title="Concluir manutenção"
+    subtitle={itemToComplete.title}
+    icon={<CheckCircle size={18} className="text-emerald-600" />}
+    maxWidthClass="max-w-3xl"
+    zIndexClass="z-[70]"
+    footer={
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCompleteModal(false)}
+          className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="submit"
+          form="completeForm"
+          disabled={isCompleting}
+          className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-sm disabled:opacity-50 active:scale-[0.99] transition"
+        >
+          {isCompleting ? "Processando..." : "Confirmar execução"}
+        </button>
+      </div>
+    }
+  >
+    <form id="completeForm" onSubmit={handleCompleteSubmit} className="space-y-4">
+        <div className="space-y-4">
+      {/* SEÇÃO: Execução */}
+      <div className="rounded-2xl border border-slate-200 bg-white">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <p className="text-xs font-semibold text-slate-700">Execução</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Informe quando foi executado e o custo final (se aplicável).
+          </p>
+        </div>
+
+        <div className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Data da execução <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="date"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
+                value={completeData.date}
+                onChange={(e) => setCompleteData((p) => ({ ...p, date: e.target.value }))}
+                required
+              />
             </div>
 
-            <div className="p-8 overflow-y-auto space-y-8 scrollbar-thin scrollbar-thumb-slate-200">
-              <form id="completeForm" onSubmit={handleCompleteSubmit} className="space-y-8">
-                {/* Mantido igual ao seu original */}
-                <div className="text-sm text-slate-500">
-                  ⚠️ O formulário de conclusão foi mantido igual ao seu original para evitar regressões.
-                </div>
-              </form>
-            </div>
-
-            <div className="p-8 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50 shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowCompleteModal(false)}
-                className="px-6 py-4 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-800 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                form="completeForm"
-                disabled={isCompleting}
-                className="px-10 py-4 bg-emerald-600 text-white rounded-2xl font-semibold text-xs uppercase tracking-wider shadow-xl hover:bg-emerald-700 active:scale-95 transition-all shadow-emerald-100"
-              >
-                {isCompleting ? "Processando..." : "Confirmar Execução"}
-              </button>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Custo da execução
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
+                value={formatBRL(completeData.cost)}
+                onChange={(e) =>
+                  handleCurrencyInputChange(e, (val) =>
+                    setCompleteData((p) => ({ ...p, cost: val }))
+                  )
+                }
+                placeholder="R$ 0,00"
+              />
+              <p className="mt-1.5 text-xs text-slate-500">
+                Se preferir, deixe em branco e ajuste depois.
+              </p>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* SEÇÃO: Prestador */}
+      <div className="rounded-2xl border border-slate-200 bg-white">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <p className="text-xs font-semibold text-slate-700">Prestador (opcional)</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Registre quem executou para facilitar consultas futuras.
+          </p>
+        </div>
+
+        <div className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Nome
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
+                value={completeData.providerName}
+                onChange={(e) => setCompleteData((p) => ({ ...p, providerName: e.target.value }))}
+                placeholder="Ex: João Silva"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Contato / Responsável
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
+                value={completeData.providerContact}
+                onChange={(e) => setCompleteData((p) => ({ ...p, providerContact: e.target.value }))}
+                placeholder="Ex: Técnico responsável"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                E-mail
+              </label>
+              <input
+                type="email"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
+                value={completeData.providerEmail}
+                onChange={(e) => setCompleteData((p) => ({ ...p, providerEmail: e.target.value }))}
+                placeholder="ex@empresa.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Telefone
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
+                value={completeData.providerPhone}
+                onChange={(e) => setCompleteData((p) => ({ ...p, providerPhone: e.target.value }))}
+                placeholder="(71) 9xxxx-xxxx"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SEÇÃO: Anexos */}
+      <div className="rounded-2xl border border-slate-200 bg-white">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <p className="text-xs font-semibold text-slate-700">Anexos</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Adicione evidências (NF, fotos, laudo, ordem de serviço etc.).
+          </p>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3 items-start">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Tipo do anexo
+              </label>
+              <select
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-slate-200"
+                value={selectedFileType}
+                onChange={(e) => setSelectedFileType(e.target.value)}
+              >
+                <option value={AttachmentType.BUDGET}>Orçamento</option>
+                <option value={AttachmentType.INVOICE}>Nota fiscal</option>
+                <option value={AttachmentType.ART_RRT}>ART/RRT</option>
+                <option value={AttachmentType.SERVICE_ORDER}>Ordem de Serviço</option>
+                <option value={AttachmentType.PHOTOS}>Fotos</option>
+                <option value={AttachmentType.TECHNICAL_REPORT}>Laudo</option>
+                <option value={AttachmentType.MAINTENANCE_REPORT}>Relatório</option>
+                <option value={AttachmentType.CERTIFICATE}>Certificado</option>
+                <option value={AttachmentType.OTHER}>Outro</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Arquivos
+              </label>
+
+              <input
+                ref={completeFileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFileUpload(e, true)}
+              />
+
+              <button
+                type="button"
+                onClick={() => completeFileInputRef.current?.click()}
+                className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100
+ px-4 py-3 text-left hover:bg-slate-100 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                    <Upload size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900">Adicionar arquivos</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      Clique para selecionar 1 ou mais arquivos
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {completeData.attachments?.length ? (
+            <div className="space-y-2">
+              {completeData.attachments.map((a, idx) => (
+                <div
+                  key={`${a.fileName}-${idx}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      {a.fileName}
+                    </p>
+                    <div className="mt-1">
+                      <AttachmentTag type={a.type as AttachmentType} />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(idx, true)}
+                    className="p-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+                    title="Remover"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
+              <p className="text-sm text-slate-600">Nenhum anexo adicionado.</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Dica: adicione pelo menos fotos ou nota fiscal para registrar a execução.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+      </div>
+    </form>
+  </BaseModal>
+)}
+{showUndoModal && (
+  <BaseModal
+    open={showUndoModal && !!itemToUndo}
+    onClose={() => {
+      if (isUndoing) return;
+      setShowUndoModal(false);
+      setItemToUndo(null);
+    }}
+    title="Desfazer conclusão?"
+    subtitle={
+      itemToUndo
+        ? `Isso irá desfazer a conclusão de "${itemToUndo.title}".`
+        : undefined
+    }
+    icon={<RotateCcw size={22} />}
+    maxWidthClass="max-w-sm"
+    zIndexClass="z-[100]"
+    footer={
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setShowUndoModal(false);
+            setItemToUndo(null);
+          }}
+          disabled={!!isUndoing}
+          className="w-full sm:w-auto px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold uppercase text-xs tracking-wider transition-all hover:bg-slate-50 disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          onClick={handleConfirmUndo}
+          disabled={!!isUndoing}
+          className="w-full sm:w-auto px-6 py-4 bg-amber-600 text-white rounded-2xl font-bold uppercase text-xs tracking-wider shadow-xl active:scale-95 disabled:opacity-50 hover:bg-amber-700 transition-colors shadow-amber-100"
+        >
+          {isUndoing ? "Desfazendo..." : "Sim, desfazer"}
+        </button>
+      </div>
+    }
+  >
+    <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+      <p className="text-sm text-amber-800 font-semibold">
+        Confirma desfazer a conclusão?
+      </p>
+      <p className="mt-1 text-xs text-amber-800/80">
+        A manutenção voltará ao status anterior e poderá ser concluída novamente depois.
+      </p>
+    </div>
+  </BaseModal>
+)}
 
                   <BaseModal
         open={!!itemToDelete}

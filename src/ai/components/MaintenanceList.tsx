@@ -1,6 +1,11 @@
 import BaseModal from "../../shared/ui/modal/BaseModal";
 import UpgradeModal from "./UpgradeModal";
 import React, { useEffect, useRef, useState } from "react";
+import MaintenanceCompleteModal from "../../features/maintenances/components/modals/MaintenanceCompleteModal";
+import MaintenanceDeleteModal from "../../features/maintenances/components/modals/MaintenanceDeleteModal";
+import MaintenanceUndoModal from "../../features/maintenances/components/modals/MaintenanceUndoModal";
+import MaintenanceViewModal from "../../features/maintenances/components/modals/MaintenanceViewModal";
+
 import {
   Maintenance,
   MaintenanceStatus,
@@ -1245,257 +1250,34 @@ const MaintenanceList: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* MODAL VIEW (novo – layout de leitura, UX premium) */}
-      {showViewModal && itemToView && (
-        <BaseModal
+        {/* MODAL VIEW (extraído) */}
+        <MaintenanceViewModal
           open={!!showViewModal && !!itemToView}
+          item={itemToView}
+          condos={condos}
+          canEdit={canEdit}
           onClose={() => setShowViewModal(false)}
-          title="Visualizar manutenção"
-          subtitle="Somente leitura"
-          icon={<Eye size={18} className="text-slate-600" />}
-          maxWidthClass="max-w-4xl"
-          zIndexClass="z-[80]"
-          footer={
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setShowViewModal(false)}
-                className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900"
-              >
-                Fechar
-              </button>
-
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowViewModal(false);
-                    handleOpenModal(itemToView);
-                  }}
-                  className="px-6 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 shadow-sm"
-                >
-                  Editar
-                </button>
-              )}
-            </div>
-          }
-        >
-          {(() => {
-            const s3 = getStatus3(itemToView, new Date());
-
-            const statusChipClass =
-              s3 === "OVERDUE"
-                ? "bg-rose-50 text-rose-700 ring-rose-200"
-                : s3 === "COMPLETED"
-                  ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                  : "bg-blue-50 text-blue-700 ring-blue-200";
-
-            const typeChipClass = getTypeClasses(itemToView.type);
-
-            // URL do anexo (sem quebrar se não existir)
-            const getAttachmentUrl = (a: any) =>
-              a?.url ||
-              a?.publicUrl ||
-              a?.downloadUrl ||
-              a?.signedUrl ||
-              a?.path ||
-              "";
-
-            return (
-              <div className="space-y-4">
-                {/* CABEÇALHO / CHIPS */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">
-                        {itemToView.title}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Visualização detalhada do registro (sem edição).
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${typeChipClass}`}
-                        title="Tipo"
-                      >
-                        {itemToView.type}
-                      </span>
-
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${statusChipClass}`}
-                        title="Status operacional"
-                      >
-                        {STATUS3_LABEL[s3]}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* GRID PRINCIPAL */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* BLOCO: Identificação */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                    <p className="text-xs font-semibold text-slate-700 mb-3">
-                      Identificação
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Condomínio
-                        </p>
-                        <p className="text-sm text-slate-800 mt-1">
-                          {condos.find((c) => c.id === itemToView.condoId)
-                            ?.name || "—"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Categoria
-                        </p>
-                        <p className="text-sm text-slate-800 mt-1">
-                          {itemToView.category || "—"}
-                        </p>
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Status operacional
-                        </p>
-                        <p className="text-sm font-semibold text-slate-800 mt-1">
-                          {STATUS3_LABEL[s3]}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* BLOCO: Datas e ciclo */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                    <p className="text-xs font-semibold text-slate-700 mb-3">
-                      Datas e ciclo
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Próximo vencimento
-                        </p>
-                        <p
-                          className={`text-sm font-semibold mt-1 ${s3 === "OVERDUE" ? "text-rose-700" : "text-slate-800"}`}
-                        >
-                          {safeFormatDate(itemToView.nextExecutionDate)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Última execução
-                        </p>
-                        <p className="text-sm font-semibold text-slate-800 mt-1">
-                          {safeFormatDate(itemToView.lastExecutionDate)}
-                        </p>
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Frequência
-                        </p>
-                        <p className="text-sm font-semibold text-slate-800 mt-1">
-                          {itemToView.type === MaintenanceType.CORRECTIVE
-                            ? "—"
-                            : `${itemToView.frequencyType} ${
-                                itemToView.frequencyDays
-                                  ? `(${itemToView.frequencyDays}d)`
-                                  : ""
-                              }`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ANEXOS */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold text-slate-700">
-                      Anexos
-                    </p>
-                    <span className="text-xs text-slate-500">
-                      {itemToView.attachments?.length ?? 0} arquivo(s)
-                    </span>
-                  </div>
-
-                  {itemToView.attachments?.length ? (
-                    <div className="mt-4 space-y-2">
-                      {itemToView.attachments.map((a: any, idx: number) => {
-                        const url = getAttachmentUrl(a);
-                        return (
-                          <div
-                            key={`${a.fileName}-${idx}`}
-                            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5"
-                          >
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-slate-800 truncate">
-                                {a.fileName}
-                              </p>
-                              <div className="mt-1">
-                                <AttachmentTag
-                                  type={a.type as AttachmentType}
-                                />
-                              </div>
-                            </div>
-
-                            {url ? (
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold"
-                                title="Abrir anexo"
-                              >
-                                Abrir
-                              </a>
-                            ) : (
-                              <span className="text-xs text-slate-400">
-                                sem link
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
-                      <p className="text-sm text-slate-600">
-                        Nenhum anexo cadastrado.
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Dica: anexe fotos, NF, laudos e ordem de serviço.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-        </BaseModal>
-      )}
-
-      {showModal && (
-        <BaseModal
-          open={showModal}
-          onClose={() => setShowModal(false)}
-          title={editingId ? "Editar manutenção" : "Nova manutenção"}
-          subtitle="Gestão de cronograma e recorrência"
-          icon={<Wrench size={18} className="text-blue-600" />}
-          maxWidthClass="max-w-4xl"
-          zIndexClass="z-[60]"
-          footer={
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          onEdit={(it) => {
+            setShowViewModal(false);
+            handleOpenModal(it);
+          }}
+          getStatus3={getStatus3}
+          STATUS3_LABEL={STATUS3_LABEL}
+          getTypeClasses={getTypeClasses}
+          safeFormatDate={safeFormatDate}
+          AttachmentTag={AttachmentTag}
+        />
+        {showModal && (
+          <BaseModal
+            open={showModal}
+            onClose={() => setShowModal(false)}
+            title={editingId ? "Editar manutenção" : "Nova manutenção"}
+            subtitle="Gestão de cronograma e recorrência"
+            icon={<Wrench size={18} className="text-blue-600" />}
+            maxWidthClass="max-w-4xl"
+            zIndexClass="z-[60]"
+            footer={
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -1930,414 +1712,50 @@ const MaintenanceList: React.FC = () => {
           </form>
         </BaseModal>
       )}
-
-      {showCompleteModal && itemToComplete && (
-        <BaseModal
-          open={showCompleteModal}
-          onClose={() => setShowCompleteModal(false)}
-          title="Concluir manutenção"
-          subtitle={itemToComplete.title}
-          icon={<CheckCircle size={18} className="text-emerald-600" />}
-          maxWidthClass="max-w-3xl"
-          zIndexClass="z-[70]"
-          footer={
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setShowCompleteModal(false)}
-                className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="submit"
-                form="completeForm"
-                disabled={isCompleting}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-sm disabled:opacity-50 active:scale-[0.99] transition"
-              >
-                {isCompleting ? "Processando..." : "Confirmar execução"}
-              </button>
-            </div>
-          }
-        >
-          <form
-            id="completeForm"
+        {showCompleteModal && itemToComplete && (
+          <MaintenanceCompleteModal
+            open={showCompleteModal}
+            onClose={() => setShowCompleteModal(false)}
+            itemToComplete={itemToComplete}
+            isCompleting={isCompleting}
             onSubmit={handleCompleteSubmit}
-            className="space-y-4"
-          >
-            <div className="space-y-4">
-              {/* SEÇÃO: Execução */}
-              <div className="rounded-2xl border border-slate-200 bg-white">
-                <div className="px-5 py-4 border-b border-slate-100">
-                  <p className="text-xs font-semibold text-slate-700">
-                    Execução
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Informe quando foi executado e o custo final (se aplicável).
-                  </p>
-                </div>
+            completeData={completeData}
+            setCompleteData={setCompleteData}
+            formatBRL={formatBRL}
+            handleCurrencyInputChange={handleCurrencyInputChange}
+            selectedFileType={selectedFileType}
+            setSelectedFileType={setSelectedFileType}
+            completeFileInputRef={completeFileInputRef}
+            handleFileUpload={handleFileUpload}
+            removeAttachment={removeAttachment}
+            AttachmentTag={AttachmentTag}
+            AttachmentType={AttachmentType}
+          />
+        )}
+{showUndoModal && (
+          <MaintenanceUndoModal
+            open={showUndoModal && !!itemToUndo}
+            onClose={() => {
+              if (isUndoing) return;
+              setShowUndoModal(false);
+              setItemToUndo(null);
+            }}
+            itemToUndo={itemToUndo}
+            isUndoingId={isUndoing}
+            onConfirm={handleConfirmUndo}
+          />
+        )}
 
-                <div className="p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        Data da execução{" "}
-                        <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
-                        value={completeData.date}
-                        onChange={(e) =>
-                          setCompleteData((p) => ({
-                            ...p,
-                            date: e.target.value,
-                          }))
-                        }
-                        required
-                      />
-                    </div>
+        <MaintenanceDeleteModal
+          open={!!itemToDelete}
+          onClose={() => setItemToDelete(null)}
+          itemToDelete={itemToDelete}
+          onConfirm={confirmDelete}
+          isDeleting={isDeleting}
+        />
 
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        Custo da execução
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
-                        value={formatBRL(completeData.cost)}
-                        onChange={(e) =>
-                          handleCurrencyInputChange(e, (val) =>
-                            setCompleteData((p) => ({ ...p, cost: val })),
-                          )
-                        }
-                        placeholder="R$ 0,00"
-                      />
-                      <p className="mt-1.5 text-xs text-slate-500">
-                        Se preferir, deixe em branco e ajuste depois.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      </div>
+    );
+  };
 
-              {/* SEÇÃO: Prestador */}
-              <div className="rounded-2xl border border-slate-200 bg-white">
-                <div className="px-5 py-4 border-b border-slate-100">
-                  <p className="text-xs font-semibold text-slate-700">
-                    Prestador (opcional)
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Registre quem executou para facilitar consultas futuras.
-                  </p>
-                </div>
-
-                <div className="p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        Nome
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
-                        value={completeData.providerName}
-                        onChange={(e) =>
-                          setCompleteData((p) => ({
-                            ...p,
-                            providerName: e.target.value,
-                          }))
-                        }
-                        placeholder="Ex: João Silva"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        Contato / Responsável
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
-                        value={completeData.providerContact}
-                        onChange={(e) =>
-                          setCompleteData((p) => ({
-                            ...p,
-                            providerContact: e.target.value,
-                          }))
-                        }
-                        placeholder="Ex: Técnico responsável"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        E-mail
-                      </label>
-                      <input
-                        type="email"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
-                        value={completeData.providerEmail}
-                        onChange={(e) =>
-                          setCompleteData((p) => ({
-                            ...p,
-                            providerEmail: e.target.value,
-                          }))
-                        }
-                        placeholder="ex@empresa.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        Telefone
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
-                        value={completeData.providerPhone}
-                        onChange={(e) =>
-                          setCompleteData((p) => ({
-                            ...p,
-                            providerPhone: e.target.value,
-                          }))
-                        }
-                        placeholder="(71) 9xxxx-xxxx"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SEÇÃO: Anexos */}
-              <div className="rounded-2xl border border-slate-200 bg-white">
-                <div className="px-5 py-4 border-b border-slate-100">
-                  <p className="text-xs font-semibold text-slate-700">Anexos</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Adicione evidências (NF, fotos, laudo, ordem de serviço
-                    etc.).
-                  </p>
-                </div>
-
-                <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3 items-start">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        Tipo do anexo
-                      </label>
-                      <select
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-slate-200"
-                        value={selectedFileType}
-                        onChange={(e) => setSelectedFileType(e.target.value)}
-                      >
-                        <option value={AttachmentType.BUDGET}>Orçamento</option>
-                        <option value={AttachmentType.INVOICE}>
-                          Nota fiscal
-                        </option>
-                        <option value={AttachmentType.ART_RRT}>ART/RRT</option>
-                        <option value={AttachmentType.SERVICE_ORDER}>
-                          Ordem de Serviço
-                        </option>
-                        <option value={AttachmentType.PHOTOS}>Fotos</option>
-                        <option value={AttachmentType.TECHNICAL_REPORT}>
-                          Laudo
-                        </option>
-                        <option value={AttachmentType.MAINTENANCE_REPORT}>
-                          Relatório
-                        </option>
-                        <option value={AttachmentType.CERTIFICATE}>
-                          Certificado
-                        </option>
-                        <option value={AttachmentType.OTHER}>Outro</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                        Arquivos
-                      </label>
-
-                      <input
-                        ref={completeFileInputRef}
-                        type="file"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, true)}
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => completeFileInputRef.current?.click()}
-                        className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100
- px-4 py-3 text-left hover:bg-slate-100 transition"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                            <Upload size={16} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-900">
-                              Adicionar arquivos
-                            </p>
-                            <p className="text-xs text-slate-500 truncate">
-                              Clique para selecionar 1 ou mais arquivos
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {completeData.attachments?.length ? (
-                    <div className="space-y-2">
-                      {completeData.attachments.map((a, idx) => (
-                        <div
-                          key={`${a.fileName}-${idx}`}
-                          className="grid grid-cols-[140px_1fr_auto] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                        >
-                          <div className="flex items-center">
-                            <AttachmentTag
-                              type={
-                                (a.type as AttachmentType) ??
-                                AttachmentType.OTHER
-                              }
-                            />
-                          </div>
-
-                          <p className="text-sm font-semibold text-slate-800 truncate min-w-0">
-                            {a.fileName}
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={() => removeAttachment(idx, true)}
-                            className="p-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
-                            title="Remover"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
-                      <p className="text-sm text-slate-600">
-                        Nenhum anexo adicionado.
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Dica: adicione pelo menos fotos ou nota fiscal para
-                        registrar a execução.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </form>
-        </BaseModal>
-      )}
-      {showUndoModal && (
-        <BaseModal
-          open={showUndoModal && !!itemToUndo}
-          onClose={() => {
-            if (isUndoing) return;
-            setShowUndoModal(false);
-            setItemToUndo(null);
-          }}
-          title="Desfazer conclusão?"
-          subtitle={
-            itemToUndo
-              ? `Isso irá desfazer a conclusão de "${itemToUndo.title}".`
-              : undefined
-          }
-          icon={<RotateCcw size={22} />}
-          maxWidthClass="max-w-sm"
-          zIndexClass="z-[100]"
-          footer={
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUndoModal(false);
-                  setItemToUndo(null);
-                }}
-                disabled={!!isUndoing}
-                className="w-full sm:w-auto px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold uppercase text-xs tracking-wider transition-all hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={handleConfirmUndo}
-                disabled={!!isUndoing}
-                className="w-full sm:w-auto px-6 py-4 bg-amber-600 text-white rounded-2xl font-bold uppercase text-xs tracking-wider shadow-xl active:scale-95 disabled:opacity-50 hover:bg-amber-700 transition-colors shadow-amber-100"
-              >
-                {isUndoing ? "Desfazendo..." : "Sim, desfazer"}
-              </button>
-            </div>
-          }
-        >
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-            <p className="text-sm text-amber-800 font-semibold">
-              Confirma desfazer a conclusão?
-            </p>
-            <p className="mt-1 text-xs text-amber-800/80">
-              A manutenção voltará ao status anterior e poderá ser concluída
-              novamente depois.
-            </p>
-          </div>
-        </BaseModal>
-      )}
-
-      <BaseModal
-        open={!!itemToDelete}
-        onClose={() => setItemToDelete(null)}
-        title="Remover manutenção?"
-        subtitle={
-          itemToDelete
-            ? `Esta ação apagará "${itemToDelete.title}" permanentemente.`
-            : undefined
-        }
-        icon={<Trash2 size={22} />}
-        maxWidthClass="max-w-sm"
-        zIndexClass="z-[100]"
-        footer={
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setItemToDelete(null)}
-              disabled={isDeleting}
-              className="w-full sm:w-auto px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold uppercase text-xs tracking-wider transition-all hover:bg-slate-50 disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="button"
-              onClick={confirmDelete}
-              disabled={isDeleting}
-              className="w-full sm:w-auto px-6 py-4 bg-rose-600 text-white rounded-2xl font-bold uppercase text-xs tracking-wider shadow-xl active:scale-95 disabled:opacity-50 hover:bg-rose-700 transition-colors shadow-rose-100"
-            >
-              {isDeleting ? "Excluindo..." : "Sim, excluir"}
-            </button>
-          </div>
-        }
-      >
-        <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
-          <p className="text-sm text-rose-700 font-semibold">
-            Atenção: esta ação é irreversível.
-          </p>
-          <p className="mt-1 text-xs text-rose-700/80">
-            Se você só precisa ajustar datas, custos ou anexos, use “Editar”. Ao
-            excluir, você remove também o histórico associado a este registro.
-          </p>
-        </div>
-      </BaseModal>
-    </div>
-  );
-};
-
-export default MaintenanceList;
+  export default MaintenanceList;

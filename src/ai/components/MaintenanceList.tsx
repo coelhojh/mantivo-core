@@ -6,7 +6,8 @@ import MaintenanceDeleteModal from "../../features/maintenances/components/modal
 import MaintenanceUndoModal from "../../features/maintenances/components/modals/MaintenanceUndoModal";
 import MaintenanceViewModal from "../../features/maintenances/components/modals/MaintenanceViewModal";
 import MaintenanceUpsertModal from "./modals/MaintenanceUpsertModal";
-
+import type { MaintenanceUpsertFormData } from "./maintenance/types";
+import type { FrequencyPreset } from "./maintenance/types";
 
 import {
   Maintenance,
@@ -215,7 +216,22 @@ const MaintenanceList: React.FC = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [isUndoing, setIsUndoing] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<Partial<Maintenance>>({});
+  const [formData, setFormData] = useState<MaintenanceUpsertFormData>({
+    title: "",
+    condoId: "",
+    category: "",
+    type: "" as any,
+    nextExecutionDate: "",
+    frequencyType: undefined,
+    frequencyDays: undefined,
+    estimatedCost: 0,
+    providerId: "",
+    providerContact: "",
+    providerPhone: "",
+    providerEmail: "",
+    attachments: [],
+  });
+
   const [completeData, setCompleteData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     cost: 0,
@@ -227,15 +243,9 @@ const MaintenanceList: React.FC = () => {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [selectedFileType, setSelectedFileType] = useState<string>(
+  const [selectedFileType, setSelectedFileType] = useState<AttachmentType>(
     AttachmentType.BUDGET,
   );
-  type FrequencyPreset =
-    | "MONTHLY"
-    | "QUARTERLY"
-    | "SEMIANNUAL"
-    | "YEARLY"
-    | "CUSTOM";
   const [frequencyPreset, setFrequencyPreset] =
     useState<FrequencyPreset>("MONTHLY");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -309,11 +319,13 @@ const MaintenanceList: React.FC = () => {
         return;
       }
       setFormData({
+          title: "",
+          condoId: "",
+          category: "",
         status: MaintenanceStatus.ON_TIME,
         frequencyType: FrequencyType.MONTHLY,
         frequencyDays: 30,
         type: MaintenanceType.PREVENTIVE,
-        cost: 0,
         estimatedCost: 0,
         attachments: [],
         nextExecutionDate: format(new Date(), "yyyy-MM-dd"),
@@ -1252,90 +1264,89 @@ const MaintenanceList: React.FC = () => {
           </div>
         )}
       </div>
-        {/* MODAL VIEW (extraído) */}
-        <MaintenanceViewModal
-          open={!!showViewModal && !!itemToView}
-          item={itemToView}
-          condos={condos}
-          canEdit={canEdit}
-          onClose={() => setShowViewModal(false)}
-          onEdit={(it) => {
-            setShowViewModal(false);
-            handleOpenModal(it);
-          }}
-          getStatus3={getStatus3}
-          STATUS3_LABEL={STATUS3_LABEL}
-          getTypeClasses={getTypeClasses}
-          safeFormatDate={safeFormatDate}
+      {/* MODAL VIEW (extraído) */}
+      <MaintenanceViewModal
+        open={!!showViewModal && !!itemToView}
+        item={itemToView}
+        condos={condos}
+        canEdit={canEdit}
+        onClose={() => setShowViewModal(false)}
+        onEdit={(it) => {
+          setShowViewModal(false);
+          handleOpenModal(it);
+        }}
+        getStatus3={getStatus3}
+        STATUS3_LABEL={STATUS3_LABEL}
+        getTypeClasses={getTypeClasses}
+        safeFormatDate={safeFormatDate}
+        AttachmentTag={AttachmentTag}
+      />
+      <MaintenanceUpsertModal
+        open={!!showModal}
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        condos={condos}
+        categories={categories}
+        providers={providers}
+        frequencyPreset={frequencyPreset}
+        setFrequencyPreset={setFrequencyPreset}
+        isCorrective={isCorrective}
+        formatBRL={formatBRL}
+        handleCurrencyInputChange={handleCurrencyInputChange}
+        handleProviderChange={handleProviderChange}
+        selectedFileType={selectedFileType}
+        setSelectedFileType={setSelectedFileType}
+        fileInputRef={fileInputRef}
+        handleFileUpload={handleFileUpload}
+        removeAttachment={removeAttachment}
+        AttachmentTag={AttachmentTag}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleSave}
+      />
+      {showCompleteModal && itemToComplete && (
+        <MaintenanceCompleteModal
+          open={showCompleteModal}
+          onClose={() => setShowCompleteModal(false)}
+          itemToComplete={itemToComplete}
+          isCompleting={isCompleting}
+          onSubmit={handleCompleteSubmit}
+          completeData={completeData}
+          setCompleteData={setCompleteData}
+          formatBRL={formatBRL}
+          handleCurrencyInputChange={handleCurrencyInputChange}
+          selectedFileType={selectedFileType}
+          setSelectedFileType={setSelectedFileType}
+          completeFileInputRef={completeFileInputRef}
+          handleFileUpload={handleFileUpload}
+          removeAttachment={removeAttachment}
           AttachmentTag={AttachmentTag}
+          AttachmentType={AttachmentType}
         />
-        <MaintenanceUpsertModal
-  open={!!showModal}
-  editingId={editingId}
-  formData={formData}
-  setFormData={setFormData}
-  condos={condos}
-  categories={categories}
-  providers={providers}
-  frequencyPreset={frequencyPreset}
-  setFrequencyPreset={setFrequencyPreset}
-  isCorrective={isCorrective}
-  formatBRL={formatBRL}
-  handleCurrencyInputChange={handleCurrencyInputChange}
-  handleProviderChange={handleProviderChange}
-  selectedFileType={selectedFileType}
-  setSelectedFileType={setSelectedFileType}
-  fileInputRef={fileInputRef}
-  handleFileUpload={handleFileUpload}
-  removeAttachment={removeAttachment}
-  AttachmentTag={AttachmentTag}
-  onClose={() => setShowModal(false)}
-  onSubmit={handleSave}
-/>
-        {showCompleteModal && itemToComplete && (
-          <MaintenanceCompleteModal
-            open={showCompleteModal}
-            onClose={() => setShowCompleteModal(false)}
-            itemToComplete={itemToComplete}
-            isCompleting={isCompleting}
-            onSubmit={handleCompleteSubmit}
-            completeData={completeData}
-            setCompleteData={setCompleteData}
-            formatBRL={formatBRL}
-            handleCurrencyInputChange={handleCurrencyInputChange}
-            selectedFileType={selectedFileType}
-            setSelectedFileType={setSelectedFileType}
-            completeFileInputRef={completeFileInputRef}
-            handleFileUpload={handleFileUpload}
-            removeAttachment={removeAttachment}
-            AttachmentTag={AttachmentTag}
-            AttachmentType={AttachmentType}
-          />
-        )}
-{showUndoModal && (
-          <MaintenanceUndoModal
-            open={showUndoModal && !!itemToUndo}
-            onClose={() => {
-              if (isUndoing) return;
-              setShowUndoModal(false);
-              setItemToUndo(null);
-            }}
-            itemToUndo={itemToUndo}
-            isUndoingId={isUndoing}
-            onConfirm={handleConfirmUndo}
-          />
-        )}
-
-        <MaintenanceDeleteModal
-          open={!!itemToDelete}
-          onClose={() => setItemToDelete(null)}
-          itemToDelete={itemToDelete}
-          onConfirm={confirmDelete}
-          isDeleting={isDeleting}
+      )}
+      {showUndoModal && (
+        <MaintenanceUndoModal
+          open={showUndoModal && !!itemToUndo}
+          onClose={() => {
+            if (isUndoing) return;
+            setShowUndoModal(false);
+            setItemToUndo(null);
+          }}
+          itemToUndo={itemToUndo}
+          isUndoingId={isUndoing}
+          onConfirm={handleConfirmUndo}
         />
+      )}
 
-      </div>
-    );
-  };
+      <MaintenanceDeleteModal
+        open={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        itemToDelete={itemToDelete}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+      />
+    </div>
+  );
+};
 
-  export default MaintenanceList;
+export default MaintenanceList;

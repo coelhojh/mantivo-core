@@ -1337,7 +1337,7 @@ const MaintenanceList: React.FC = () => {
                 {/* GRID PRINCIPAL */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* BLOCO: Identificação */}
-                  <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-5">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                     <p className="text-xs font-semibold text-slate-700 mb-3">
                       Identificação
                     </p>
@@ -1374,7 +1374,7 @@ const MaintenanceList: React.FC = () => {
                   </div>
 
                   {/* BLOCO: Datas e ciclo */}
-                  <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-5">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                     <p className="text-xs font-semibold text-slate-700 mb-3">
                       Datas e ciclo
                     </p>
@@ -1419,7 +1419,7 @@ const MaintenanceList: React.FC = () => {
                 </div>
 
                 {/* ANEXOS */}
-                <div className="rounded-2xl bg-white ring-1 ring-slate-200/70 p-5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-xs font-semibold text-slate-700">
                       Anexos

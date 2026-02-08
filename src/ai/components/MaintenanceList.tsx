@@ -2,6 +2,8 @@ import BaseModal from "../../shared/ui/modal/BaseModal";
 import UpgradeModal from "./UpgradeModal";
 import { buildMaintenancePayload } from "./maintenance/mappers/buildMaintenancePayload";
 import { resolveFrequencyPreset } from "./maintenance/mappers/resolveFrequencyPreset";
+import { getEmptyMaintenanceFormData } from "./maintenance/mappers/getEmptyMaintenanceFormData";
+import { getFormDataFromMaintenance } from "./maintenance/mappers/getFormDataFromMaintenance";
 import React, { useEffect, useRef, useState } from "react";
 import MaintenanceCompleteModal from "../../features/maintenances/components/modals/MaintenanceCompleteModal";
 import MaintenanceDeleteModal from "../../features/maintenances/components/modals/MaintenanceDeleteModal";
@@ -222,7 +224,7 @@ const MaintenanceList: React.FC = () => {
     title: "",
     condoId: "",
     category: "",
-    type: "" as any,
+    type: "" as MaintenanceUpsertFormData["type"],
     nextExecutionDate: "",
     frequencyType: undefined,
     frequencyDays: undefined,
@@ -312,7 +314,7 @@ const MaintenanceList: React.FC = () => {
 
     if (maintenance) {
       const sortedAttachments = sortAttachments(maintenance.attachments || []);
-      setFormData({ ...maintenance, attachments: sortedAttachments });
+      setFormData(getFormDataFromMaintenance(maintenance, sortedAttachments));
       setEditingId(maintenance.id);
     } else {
       const allowed = await checkPlanLimits("maintenance");
@@ -320,18 +322,7 @@ const MaintenanceList: React.FC = () => {
         setShowUpgradeModal(true);
         return;
       }
-      setFormData({
-          title: "",
-          condoId: "",
-          category: "",
-        status: MaintenanceStatus.ON_TIME,
-        frequencyType: FrequencyType.MONTHLY,
-        frequencyDays: 30,
-        type: MaintenanceType.PREVENTIVE,
-        estimatedCost: 0,
-        attachments: [],
-        nextExecutionDate: format(new Date(), "yyyy-MM-dd"),
-      });
+        setFormData(getEmptyMaintenanceFormData());
       setEditingId(null);
     }
     setShowModal(true);
@@ -384,28 +375,30 @@ const MaintenanceList: React.FC = () => {
   };
 
   const handleProviderChange = (providerId: string) => {
-    const selected = providers.find((p) => p.id === providerId);
-    if (selected) {
-      const p = selected as Provider;
-      setFormData({
-        ...formData,
-        providerId: p.id,
-        providerName: p.name,
-        providerContact: p.contactName,
-        providerEmail: p.email,
-        providerPhone: p.phone || p.whatsapp,
-      });
-    } else {
-      setFormData({
-        ...formData,
-        providerId: "",
-        providerName: "",
-        providerContact: "",
-        providerEmail: "",
-        providerPhone: "",
-      });
-    }
-  };
+  const selected = providers.find((p: any) => p.id === providerId);
+
+  if (selected) {
+    setFormData((prev) => ({
+      ...prev,
+      providerId: selected.id,
+      providerName: selected.name,
+      providerContact: selected.contactName ?? "",
+      providerEmail: selected.email ?? "",
+      providerPhone: selected.phone ?? selected.whatsapp ?? "",
+    }));
+    return;
+  }
+
+  // Sem prestador
+  setFormData((prev) => ({
+    ...prev,
+    providerId: "",
+    providerName: "",
+    providerContact: "",
+    providerEmail: "",
+    providerPhone: "",
+  }));
+};
 
   const sortAttachments = (
     attachments: MaintenanceAttachment[],
@@ -491,7 +484,7 @@ const MaintenanceList: React.FC = () => {
 
     const resolvedFrequency = resolveFrequencyPreset(
       frequencyPreset,
-      formData.type as any,
+      formData.type as MaintenanceType,
     );
 
     const payload = buildMaintenancePayload({

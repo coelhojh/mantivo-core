@@ -39,6 +39,7 @@ export type MaintenanceFormAttachment = {
 
 export type MaintenanceUpsertFormData = {
   title: string;
+  description?: string;
   condoId: string;
   category: string;
   type: MaintenanceType | "";

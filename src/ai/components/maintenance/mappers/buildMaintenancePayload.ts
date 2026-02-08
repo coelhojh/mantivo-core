@@ -61,15 +61,28 @@ export function buildMaintenancePayload(
       type: a?.type ? String(a.type) : String(selectedFileType),
     })) ?? [];
 
+  if (!formData.type) {
+    throw new Error("Tipo de manutenção é obrigatório.");
+  }
+  if (!formData.title?.trim()) {
+    throw new Error("Título é obrigatório.");
+  }
+  if (!formData.condoId) {
+    throw new Error("Condomínio é obrigatório.");
+  }
+  if (!formData.category) {
+    throw new Error("Categoria é obrigatória.");
+  }
+
   return {
     condoId: formData.condoId,
     category: formData.category,
     type: formData.type as MaintenanceType, // validaremos "" no handler
     title,
-    description: (formData as any).description ?? "",
+    description: formData.description ?? "",
 
     providerId: toNull(formData.providerId ?? null),
-    providerName: (formData.providerName ?? "") as any,
+    providerName: formData.providerName ?? "",
     providerContact: (formData.providerContact ?? "") as any,
     providerEmail: (formData.providerEmail ?? "") as any,
     providerPhone: (formData.providerPhone ?? "") as any,

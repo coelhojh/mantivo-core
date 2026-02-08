@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { Maintenance, MaintenanceType } from "../../../ai/types";
 import { saveMaintenance, updateMaintenance } from "../../../ai/services/storageService";
+import { buildMaintenancePayload } from "../mappers/buildMaintenancePayload";
 
 type UpsertMode = "create" | "edit";
 
@@ -11,13 +12,6 @@ type SubmitArgs = {
   items: Maintenance[];
 
   resolveFrequencyPreset: (preset: any, type: MaintenanceType) => any;
-  buildMaintenancePayload: (args: {
-    formData: any;
-    frequencyPreset: any;
-    selectedFileType: any;
-  }) => any;
-
-  onClose: () => void;
   onSuccess: () => void;
   onError?: (message: string, error?: unknown) => void;
 };
@@ -121,8 +115,6 @@ export function useMaintenanceUpsert(deps: UpsertControllerDeps) {
         selectedFileType,
         items,
         resolveFrequencyPreset,
-        buildMaintenancePayload,
-        onClose,
         onSuccess,
         onError,
       } = args;
@@ -167,7 +159,7 @@ export function useMaintenanceUpsert(deps: UpsertControllerDeps) {
           await saveMaintenance(payload);
         }
 
-        onClose();
+        close();
         onSuccess();
         startCreate();
       } catch (e: any) {

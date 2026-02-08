@@ -3,7 +3,6 @@ import UpgradeModal from "./UpgradeModal";
 import { useMaintenanceUpsert } from "../../features/maintenances/hooks/useMaintenanceUpsert";
 import { useMaintenanceAttachments } from "../../features/maintenances/hooks/useMaintenanceAttachments";
 import { useMaintenanceComplete } from "../../features/maintenances/hooks/useMaintenanceComplete";
-import { buildMaintenancePayload } from "../../features/maintenances/mappers/buildMaintenancePayload";
 import { resolveFrequencyPreset } from "./maintenance/mappers/resolveFrequencyPreset";
 import { getEmptyMaintenanceFormData } from "./maintenance/mappers/getEmptyMaintenanceFormData";
 import { getFormDataFromMaintenance } from "./maintenance/mappers/getFormDataFromMaintenance";
@@ -412,8 +411,6 @@ const MaintenanceList: React.FC = () => {
       selectedFileType: selectedFileTypeUpsert,
       items,
       resolveFrequencyPreset,
-      buildMaintenancePayload,
-      onClose: () => setShowModal(false),
       onSuccess: () => refreshData(),
       onError: (message) => alert(message),
     });

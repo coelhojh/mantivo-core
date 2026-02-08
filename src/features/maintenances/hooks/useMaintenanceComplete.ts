@@ -14,6 +14,7 @@ export type CompleteMaintenancePayload = {
 
 export function useMaintenanceComplete() {
   const [isCompletingId, setIsCompletingId] = useState<string | null>(null);
+  const [isUndoingId, setIsUndoingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function complete(payload: CompleteMaintenancePayload) {
@@ -35,14 +36,14 @@ export function useMaintenanceComplete() {
   async function undo(id: string) {
     try {
       setError(null);
-      setIsCompletingId(id);
+      setIsUndoingId(id);
       await undoCompleteMaintenance(id);
     } catch (err) {
       console.error("Erro ao desfazer conclusão:", err);
       setError("Erro ao desfazer conclusão");
       throw err;
     } finally {
-      setIsCompletingId(null);
+      setIsUndoingId(null);
     }
   }
 
@@ -50,6 +51,7 @@ export function useMaintenanceComplete() {
     complete,
     undo,
     isCompletingId,
+    isUndoingId,
     error,
   };
 }

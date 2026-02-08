@@ -209,7 +209,7 @@ const MaintenanceList: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [showUndoModal, setShowUndoModal] = useState(false);
+  
   const [itemToUndo, setItemToUndo] = useState<Maintenance | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Maintenance | null>(null);
@@ -219,42 +219,15 @@ const MaintenanceList: React.FC = () => {
   const [itemToView, setItemToView] = useState<Maintenance | null>(null);
 
   const [isDeleting, setIsDeleting] = useState(false);
-  const { complete, undo, isCompletingId } = useMaintenanceComplete();
+  const { complete, undo, isCompletingId, isUndoingId } = useMaintenanceComplete();
 
-  const [formData, setFormData] = useState<MaintenanceUpsertFormData>({
-    title: "",
-    condoId: "",
-    category: "",
-    type: "" as MaintenanceUpsertFormData["type"],
-    nextExecutionDate: "",
-    frequencyType: undefined,
-    frequencyDays: undefined,
-    estimatedCost: 0,
-    providerId: "",
-    providerContact: "",
-    providerPhone: "",
-    providerEmail: "",
-    attachments: [],
-  });
-  const [completeData, setCompleteData] = useState<MaintenanceCompleteData>({
-    date: format(new Date(), "yyyy-MM-dd"),
-    cost: 0,
-    providerName: "",
-    providerContact: "",
-    providerEmail: "",
-    providerPhone: "",
-    attachments: [],
-  });
-  const [selectedFileTypeUpsert, setSelectedFileTypeUpsert] = useState<AttachmentType>(
-  AttachmentType.BUDGET,
-);
-const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<AttachmentType>(
-  AttachmentType.BUDGET,
-);
+  const [selectedFileTypeUpsert, setSelectedFileTypeUpsert] =
+    useState<AttachmentType>(AttachmentType.BUDGET);
+
   const [frequencyPreset, setFrequencyPreset] =
     useState<FrequencyPreset>("MONTHLY");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const completeFileInputRef = useRef<HTMLInputElement>(null);
 
   const user = getUser();
   const canEdit =
@@ -265,7 +238,6 @@ const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<Attachm
     user?.role === "admin" ||
     user?.role === "super_admin" ||
     user?.permissions?.canDelete;
-
 
   const sortAttachments = (
     attachments: MaintenanceAttachment[],
@@ -282,7 +254,23 @@ const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<Attachm
       return safeB - safeA;
     });
   };
+  const attachmentsCtrl = useMaintenanceAttachments({ sortAttachments });
 
+  const [formData, setFormData] = useState<MaintenanceUpsertFormData>({
+    title: "",
+    condoId: "",
+    category: "",
+    type: "" as MaintenanceUpsertFormData["type"],
+    nextExecutionDate: "",
+    frequencyType: undefined,
+    frequencyDays: undefined,
+    estimatedCost: 0,
+    providerId: "",
+    providerContact: "",
+    providerPhone: "",
+    providerEmail: "",
+    attachments: [],
+  });
 
   const upsert = useMaintenanceUpsert({
     canEdit,
@@ -294,9 +282,6 @@ const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<Attachm
     getFormDataFromMaintenance,
     sortAttachments,
   });
-
-  const attachmentsCtrl = useMaintenanceAttachments({ sortAttachments });
-
 
   useEffect(() => {
     refreshData();
@@ -349,15 +334,6 @@ const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<Attachm
 
   const handleOpenCompleteModal = (item: Maintenance) => {
     setItemToComplete(item);
-    setCompleteData({
-      date: format(new Date(), "yyyy-MM-dd"),
-      cost: item.estimatedCost || 0,
-      providerName: item.providerName || "",
-      providerContact: item.providerContact || "",
-      providerEmail: item.providerEmail || "",
-      providerPhone: item.providerPhone || "",
-      attachments: sortAttachments(item.attachments || []),
-    });
     setShowCompleteModal(true);
   };
 
@@ -367,121 +343,106 @@ const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<Attachm
     if (!item) return;
 
     setItemToUndo(item);
-    setShowUndoModal(true);
+    
   };
 
   const handleConfirmUndo = async () => {
-  if (!itemToUndo) return;
-  if (isCompletingId === itemToUndo.id) return;
+    if (!itemToUndo) return;
+    if (isCompletingId === itemToUndo.id) return;
 
-  try {
-    await undo(itemToUndo.id);
-    await refreshData();
+    try {
+      await undo(itemToUndo.id);
+      await refreshData();
 
-    setShowUndoModal(false);
-    setItemToUndo(null);
-  } catch (e) {
-    alert("Erro ao desfazer conclusão.");
-  }
-};
+      
+      setItemToUndo(null);
+    } catch (e) {
+      alert("Erro ao desfazer conclusão.");
+    }
+  };
 
   const handleProviderChange = (providerId: string) => {
-  const selected = providers.find((p: any) => p.id === providerId);
+    const selected = providers.find((p: any) => p.id === providerId);
 
-  if (selected) {
+    if (selected) {
+      setFormData((prev) => ({
+        ...prev,
+        providerId: selected.id,
+        providerName: selected.name,
+        providerContact: selected.contactName ?? "",
+        providerEmail: selected.email ?? "",
+        providerPhone: selected.phone ?? selected.whatsapp ?? "",
+      }));
+      return;
+    }
+
+    // Sem prestador
     setFormData((prev) => ({
       ...prev,
-      providerId: selected.id,
-      providerName: selected.name,
-      providerContact: selected.contactName ?? "",
-      providerEmail: selected.email ?? "",
-      providerPhone: selected.phone ?? selected.whatsapp ?? "",
+      providerId: "",
+      providerName: "",
+      providerContact: "",
+      providerEmail: "",
+      providerPhone: "",
     }));
-    return;
-  }
+  };
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-  // Sem prestador
-  setFormData((prev) => ({
-    ...prev,
-    providerId: "",
-    providerName: "",
-    providerContact: "",
-    providerEmail: "",
-    providerPhone: "",
-  }));
-};
-const handleFileUpload = (
-  e: React.ChangeEvent<HTMLInputElement>,
-  isCompleteModal: boolean = false,
-) => {
-  const files = e.target.files;
-  if (!files || files.length === 0) return;
-
-  const newItems = attachmentsCtrl.buildNewItems(
-    files,
-    isCompleteModal ? selectedFileTypeComplete : selectedFileTypeUpsert,
-  );
-
-  if (isCompleteModal) {
-    attachmentsCtrl.appendTo(setCompleteData, newItems);
-    attachmentsCtrl.resetInput(completeFileInputRef);
-  } else {
+    const newItems = attachmentsCtrl.buildNewItems(
+      files,
+      selectedFileTypeUpsert,
+    );
     attachmentsCtrl.appendTo(setFormData, newItems);
     attachmentsCtrl.resetInput(fileInputRef);
-  }
-};
+  };
 
-const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
-  if (isCompleteModal) {
-    attachmentsCtrl.removeAt(setCompleteData, index);
-  } else {
+  const removeAttachment = (index: number) => {
     attachmentsCtrl.removeAt(setFormData, index);
-  }
-};
+  };
 
   const handleSave = async (e: React.FormEvent) => {
-      e.preventDefault();
+    e.preventDefault();
 
-      await upsert.submit({
-        formData,
-        frequencyPreset,
-        selectedFileType: selectedFileTypeUpsert,
-        items,
-        resolveFrequencyPreset,
-        buildMaintenancePayload,
-        onClose: () => setShowModal(false),
-        onSuccess: () => refreshData(),
-        onError: (message) => alert(message),
-      });
-    };
-
-  const handleCompleteSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!itemToComplete) return;
-  if (isCompletingId === itemToComplete.id) return;
-
-  try {
-    await complete({
-      id: itemToComplete.id,
-      date: completeData.date,
-      cost: completeData.cost,
-      attachments: completeData.attachments || [],
-      provider: {
-        name: completeData.providerName,
-        contact: completeData.providerContact,
-        email: completeData.providerEmail,
-        phone: completeData.providerPhone,
-      },
+    await upsert.submit({
+      formData,
+      frequencyPreset,
+      selectedFileType: selectedFileTypeUpsert,
+      items,
+      resolveFrequencyPreset,
+      buildMaintenancePayload,
+      onClose: () => setShowModal(false),
+      onSuccess: () => refreshData(),
+      onError: (message) => alert(message),
     });
+  };
+  type CompletePayload = {
+    id: string;
+    date: string;
+    cost: number;
+    attachments: MaintenanceAttachment[];
+    provider: {
+      name: string;
+      contact: string;
+      email: string;
+      phone: string;
+    };
+  };
 
-    setShowCompleteModal(false);
-    await refreshData();
-  } catch (error: any) {
-    alert("Erro ao concluir manutenção.");
-  } finally {
-    setItemToComplete(null);
-  }
-};
+  const handleConfirmComplete = async (payload: CompletePayload) => {
+    if (isCompletingId === payload.id) return;
+
+    try {
+      await complete(payload);
+      setShowCompleteModal(false);
+      setItemToComplete(null);
+      await refreshData();
+    } catch (error) {
+      console.error("Erro ao concluir manutenção:", error);
+      alert("Erro ao concluir manutenção.");
+    }
+  };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
@@ -1259,33 +1220,30 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
       />
       {showCompleteModal && itemToComplete && (
         <MaintenanceCompleteModal
-          open={showCompleteModal}
-          onClose={() => setShowCompleteModal(false)}
+          open={!!itemToComplete}
           itemToComplete={itemToComplete}
-          isCompleting={isCompletingId === itemToComplete.id}
-          onSubmit={handleCompleteSubmit}
-          completeData={completeData}
-          setCompleteData={setCompleteData}
+          isSubmitting={isCompletingId === itemToComplete?.id}
+          onClose={() => {
+            if (isCompletingId && isCompletingId === itemToComplete?.id) return;
+            setShowCompleteModal(false);
+            setItemToComplete(null);
+          }}
+          onConfirm={handleConfirmComplete}
           formatBRL={formatBRL}
           handleCurrencyInputChange={handleCurrencyInputChange}
-          selectedFileType={selectedFileTypeComplete}
-          setSelectedFileType={setSelectedFileTypeComplete}
-          completeFileInputRef={completeFileInputRef}
-          handleFileUpload={handleFileUpload}
-          removeAttachment={removeAttachment}
           AttachmentTag={AttachmentTag}
         />
       )}
-      {showUndoModal && (
+      {!!itemToUndo && (
         <MaintenanceUndoModal
-          open={showUndoModal && !!itemToUndo}
+          open={true}
           onClose={() => {
-            if (isCompletingId) return;
-            setShowUndoModal(false);
+            if (isUndoingId) return;
+            
             setItemToUndo(null);
           }}
           itemToUndo={itemToUndo}
-          isUndoingId={isCompletingId}
+          isUndoingId={isUndoingId}
           onConfirm={handleConfirmUndo}
         />
       )}

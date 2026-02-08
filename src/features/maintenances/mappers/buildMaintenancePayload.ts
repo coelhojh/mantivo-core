@@ -3,11 +3,27 @@ import type {
   FrequencyType,MaintenanceType,
   MaintenanceAttachment,
   Maintenance,
-} from "../../../types";
-import type { MaintenanceUpsertFormData } from "../types";
+} from "../../../ai/types";
 
 export type BuildMaintenancePayloadArgs = {
-  formData: MaintenanceUpsertFormData;
+  formData: {
+    condoId: string;
+    category: any;
+    type: any;
+    title: string;
+    description?: string;
+    providerId?: string | null;
+    providerName?: string;
+    providerContact?: string;
+    providerEmail?: string;
+    providerPhone?: string;
+    estimatedCost?: number | string | null;
+    frequencyType?: any;
+    frequencyDays?: number | null;
+    nextExecutionDate?: string;
+    status?: any;
+    attachments?: any[];
+  };
 
   /**
    * Override opcional vindo de preset (ex.: MONTHLY -> {type, days})

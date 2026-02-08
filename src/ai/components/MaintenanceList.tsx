@@ -12,6 +12,7 @@ import MaintenanceCompleteModal from "../../features/maintenances/components/mod
 import MaintenanceDeleteModal from "../../features/maintenances/components/modals/MaintenanceDeleteModal";
 import MaintenanceUndoModal from "../../features/maintenances/components/modals/MaintenanceUndoModal";
 import MaintenanceViewModal from "../../features/maintenances/components/modals/MaintenanceViewModal";
+import MaintenanceRowActions from "../../features/maintenances/components/MaintenanceRowActions";
 import MaintenanceUpsertModal from "./modals/MaintenanceUpsertModal";
 import type { MaintenanceUpsertFormData } from "./maintenance/types";
 import type { MaintenanceCompleteData } from "../../features/maintenances/types/MaintenanceCompleteData";
@@ -833,78 +834,22 @@ const MaintenanceList: React.FC = () => {
                                 >
                                   {item.type}
                                 </span>
-
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0 z-10">
-                                  <button
-                                    onClick={() => handleOpenViewModal(item)}
-                                    className="p-1.5 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
-                                    title="Visualizar"
-                                  >
-                                    <Eye size={13} />
-                                  </button>
-
-                                  {canEdit && (
-                                    <button
-                                      onClick={() => upsert.openEdit(item)}
-                                      className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
-                                      title="Editar"
-                                    >
-                                      <Edit2 size={13} />
-                                    </button>
-                                  )}
-
-                                  {canEdit && !isCompleted && (
-                                    <button
-                                      onClick={() =>
-                                        handleOpenCompleteModal(item)
-                                      }
-                                      className="p-1.5 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100"
-                                      title="Concluir"
-                                    >
-                                      <Check size={13} />
-                                    </button>
-                                  )}
-
-                                  {canEdit && isCompleted && (
-                                    <button
-                                      type="button"
-                                      onPointerDown={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                      }}
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                      }}
-                                      onClick={() =>
-                                        handleUndoComplete(item.id)
-                                      }
-                                      disabled={isCompletingId === item.id}
-                                      className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-all"
-                                      title="Desfazer Conclusão"
-                                    >
-                                      {isCompletingId === item.id ? (
-                                        <Loader2
-                                          size={13}
-                                          className="animate-spin"
-                                        />
-                                      ) : (
-                                        <RotateCcw size={13} />
-                                      )}
-                                    </button>
-                                  )}
-
-                                  {canDelete && (
-                                    <button
-                                      onClick={() => setItemToDelete(item)}
-                                      className="p-1.5 text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100"
-                                      title="Excluir"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  )}
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0 z-10">
+                                    <MaintenanceRowActions
+                                      item={item}
+                                      canEdit={canEdit}
+                                      canDelete={canDelete}
+                                      isCompleted={isCompleted}
+                                      isCompletingId={isCompletingId}
+                                      onView={handleOpenViewModal}
+                                      onEdit={(it) => upsert.openEdit(it)}
+                                      onComplete={handleOpenCompleteModal}
+                                      onUndoComplete={handleUndoComplete}
+                                      onDelete={(it) => setItemToDelete(it)}
+                                      size="sm"
+                                    />
+                                  </div>
                                 </div>
-                              </div>
 
                               <div className="flex items-center mb-2 min-w-0">
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate flex-1">
@@ -1105,70 +1050,21 @@ const MaintenanceList: React.FC = () => {
                       </td>
 
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleOpenViewModal(item)}
-                            className="p-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all shadow-sm"
-                            title="Visualizar"
-                          >
-                            <Eye size={16} />
-                          </button>
-
-                          {canEdit && (
-                            <button
-                              onClick={() => upsert.openEdit(item)}
-                              className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all shadow-sm"
-                              title="Editar"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                          )}
-
-                          {canEdit && !isCompleted && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCompleteModal(item)}
-                              className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all shadow-sm"
-                              title="Concluir"
-                            >
-                              <Check size={16} />
-                            </button>
-                          )}
-
-                          {canEdit && isCompleted && (
-                            <button
-                              type="button"
-                              onPointerDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
-                              onClick={() => handleUndoComplete(item.id)}
-                              disabled={isCompletingId === item.id}
-                              className="relative z-30 p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-all shadow-sm"
-                              title="Desfazer Conclusão"
-                            >
-                              {isCompletingId === item.id ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                <RotateCcw size={16} />
-                              )}
-                            </button>
-                          )}
-
-                          {canDelete && (
-                            <button
-                              onClick={() => setItemToDelete(item)}
-                              className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all shadow-sm"
-                              title="Excluir"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </div>
+                          <div className="flex justify-end gap-2">
+                            <MaintenanceRowActions
+                              item={item}
+                              canEdit={canEdit}
+                              canDelete={canDelete}
+                              isCompleted={isCompleted}
+                              isCompletingId={isCompletingId}
+                              onView={handleOpenViewModal}
+                              onEdit={(it) => upsert.openEdit(it)}
+                              onComplete={handleOpenCompleteModal}
+                              onUndoComplete={handleUndoComplete}
+                              onDelete={(it) => setItemToDelete(it)}
+                              size="md"
+                            />
+                          </div>
                       </td>
                     </tr>
                   );

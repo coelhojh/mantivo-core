@@ -1,38 +1,50 @@
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle } from "lucide-react";
+import { format } from "date-fns";
+
 import BaseModal from "../../../../shared/ui/modal/BaseModal";
 import MaintenanceAttachmentsSection from "../attachments/MaintenanceAttachmentsSection";
-import type { AttachmentType, MaintenanceAttachment } from "../../../../ai/types";
-import type { MaintenanceCompleteData } from "../../types/MaintenanceCompleteData";
+
+import { AttachmentType } from "../../../../ai/types";
+import type { Maintenance, MaintenanceAttachment } from "../../../../ai/types";
+
+type CompleteData = {
+  date: string;
+  cost: number;
+  providerName: string;
+  providerContact: string;
+  providerEmail: string;
+  providerPhone: string;
+  attachments: MaintenanceAttachment[];
+};
+
+type CompletePayload = {
+  id: string;
+  date: string;
+  cost: number;
+  attachments: MaintenanceAttachment[];
+  provider: {
+    name: string;
+    contact: string;
+    email: string;
+    phone: string;
+  };
+};
 
 type Props = {
   open: boolean;
   onClose: () => void;
 
-  itemToComplete: { title: string } | null;
+  itemToComplete: Maintenance;
+  isSubmitting: boolean;
 
-  isCompleting: boolean;
-  onSubmit: React.FormEventHandler<HTMLFormElement>;
-
-  completeData: MaintenanceCompleteData;
-  setCompleteData: React.Dispatch<React.SetStateAction<MaintenanceCompleteData>>;
+  onConfirm: (payload: CompletePayload) => Promise<void> | void;
 
   formatBRL: (value: number) => string;
   handleCurrencyInputChange: (
     e: React.ChangeEvent<HTMLInputElement>,
-    onValue: (val: number) => void
+    onValue: (val: number) => void,
   ) => void;
-
-  selectedFileType: AttachmentType;
-  setSelectedFileType: (v: AttachmentType) => void;
-
-  completeFileInputRef: React.RefObject<HTMLInputElement>;
-  handleFileUpload: (
-    e: React.ChangeEvent<HTMLInputElement>,
-    isComplete: boolean
-  ) => void;
-
-  removeAttachment: (idx: number, isComplete: boolean) => void;
 
   AttachmentTag: React.ComponentType<{ type: AttachmentType }>;
 };
@@ -41,21 +53,91 @@ export default function MaintenanceCompleteModal({
   open,
   onClose,
   itemToComplete,
-  isCompleting,
-  onSubmit,
-  completeData,
-  setCompleteData,
+  isSubmitting,
+  onConfirm,
   formatBRL,
   handleCurrencyInputChange,
-  selectedFileType,
-  setSelectedFileType,
-  completeFileInputRef,
-  handleFileUpload,
-  removeAttachment,
   AttachmentTag,
-
 }: Props) {
-  if (!itemToComplete) return null;
+  const completeFileInputRef = useRef<HTMLInputElement>(null);
+
+  const initialData: CompleteData = useMemo(() => {
+    return {
+      date: format(new Date(), "yyyy-MM-dd"),
+      cost: itemToComplete?.estimatedCost || 0,
+      providerName: (itemToComplete as any)?.providerName || "",
+      providerContact: (itemToComplete as any)?.providerContact || "",
+      providerEmail: (itemToComplete as any)?.providerEmail || "",
+      providerPhone: (itemToComplete as any)?.providerPhone || "",
+      attachments: ((itemToComplete as any)?.attachments || []) as MaintenanceAttachment[],
+    };
+  }, [itemToComplete]);
+
+  const [completeData, setCompleteData] = useState<CompleteData>(initialData);
+
+  const [selectedFileType, setSelectedFileType] = useState<AttachmentType>(
+    AttachmentType.BUDGET,
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setCompleteData(initialData);
+    if (completeFileInputRef.current) completeFileInputRef.current.value = "";
+  }, [open, initialData]);
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const uuid =
+      (globalThis.crypto as any)?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const nowIso = new Date().toISOString();
+
+    const newItems: MaintenanceAttachment[] = Array.from(files).map((f) => {
+      return {
+        id: `${uuid}-${f.name}`,
+        name: f.name,
+        type: selectedFileType,
+        uploadDate: nowIso,
+        size: f.size,
+        file: f,
+      } as any;
+    });
+
+    setCompleteData((prev) => ({
+      ...prev,
+      attachments: [...(prev.attachments || []), ...newItems],
+    }));
+
+    if (completeFileInputRef.current) completeFileInputRef.current.value = "";
+  };
+
+  const removeAttachment = (idx: number) => {
+    setCompleteData((prev) => ({
+      ...prev,
+      attachments: (prev.attachments || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
+    e.preventDefault();
+
+    const payload: CompletePayload = {
+      id: itemToComplete.id,
+      date: completeData.date,
+      cost: completeData.cost,
+      attachments: completeData.attachments || [],
+      provider: {
+        name: completeData.providerName,
+        contact: completeData.providerContact,
+        email: completeData.providerEmail,
+        phone: completeData.providerPhone,
+      },
+    };
+
+    await onConfirm(payload);
+  };
 
   return (
     <BaseModal
@@ -79,15 +161,15 @@ export default function MaintenanceCompleteModal({
           <button
             type="submit"
             form="completeForm"
-            disabled={isCompleting}
+            disabled={isSubmitting}
             className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-sm disabled:opacity-50 active:scale-[0.99] transition"
           >
-            {isCompleting ? "Processando..." : "Confirmar execução"}
+            {isSubmitting ? "Processando..." : "Confirmar execução"}
           </button>
         </div>
       }
     >
-      <form id="completeForm" onSubmit={onSubmit} className="space-y-4">
+      <form id="completeForm" onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-4">
           {/* SEÇÃO: Execução */}
           <div className="rounded-2xl border border-slate-200 bg-white">
@@ -109,13 +191,13 @@ export default function MaintenanceCompleteModal({
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
                     value={completeData.date}
                     onChange={(e) =>
-                      setCompleteData((p: any) => ({
+                      setCompleteData((p) => ({
                         ...p,
                         date: e.target.value,
                       }))
                     }
                     required
-            />
+                  />
                 </div>
 
                 <div>
@@ -129,11 +211,11 @@ export default function MaintenanceCompleteModal({
                     value={formatBRL(completeData.cost)}
                     onChange={(e) =>
                       handleCurrencyInputChange(e, (val) =>
-                        setCompleteData((p: any) => ({ ...p, cost: val }))
+                        setCompleteData((p) => ({ ...p, cost: val })),
                       )
                     }
                     placeholder="R$ 0,00"
-            />
+                  />
                   <p className="mt-1.5 text-xs text-slate-500">
                     Se preferir, deixe em branco e ajuste depois.
                   </p>
@@ -164,13 +246,13 @@ export default function MaintenanceCompleteModal({
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
                     value={completeData.providerName}
                     onChange={(e) =>
-                      setCompleteData((p: any) => ({
+                      setCompleteData((p) => ({
                         ...p,
                         providerName: e.target.value,
                       }))
                     }
                     placeholder="Ex: João Silva"
-            />
+                  />
                 </div>
 
                 <div>
@@ -182,13 +264,13 @@ export default function MaintenanceCompleteModal({
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
                     value={completeData.providerContact}
                     onChange={(e) =>
-                      setCompleteData((p: any) => ({
+                      setCompleteData((p) => ({
                         ...p,
                         providerContact: e.target.value,
                       }))
                     }
                     placeholder="Ex: Técnico responsável"
-            />
+                  />
                 </div>
 
                 <div>
@@ -200,13 +282,13 @@ export default function MaintenanceCompleteModal({
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
                     value={completeData.providerEmail}
                     onChange={(e) =>
-                      setCompleteData((p: any) => ({
+                      setCompleteData((p) => ({
                         ...p,
                         providerEmail: e.target.value,
                       }))
                     }
                     placeholder="ex@empresa.com"
-            />
+                  />
                 </div>
 
                 <div>
@@ -218,32 +300,32 @@ export default function MaintenanceCompleteModal({
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-slate-200"
                     value={completeData.providerPhone}
                     onChange={(e) =>
-                      setCompleteData((p: any) => ({
+                      setCompleteData((p) => ({
                         ...p,
                         providerPhone: e.target.value,
                       }))
                     }
                     placeholder="(71) 9xxxx-xxxx"
-            />
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           {/* SEÇÃO: Anexos */}
-            <MaintenanceAttachmentsSection
-              title="Anexos"
-              subtitle="Adicione evidências (NF, fotos, laudo, ordem de serviço etc.)."
-              attachments={(completeData.attachments || []) as MaintenanceAttachment[]}
-              selectedFileType={selectedFileType}
-              setSelectedFileType={setSelectedFileType}
-              inputRef={completeFileInputRef}
-              onUpload={(e) => handleFileUpload(e, true)}
-              onRemove={(idx) => removeAttachment(idx, true)}
-              AttachmentTag={AttachmentTag}
-            />
-          </div>
-        </form>
+          <MaintenanceAttachmentsSection
+            title="Anexos"
+            subtitle="Adicione evidências (NF, fotos, laudo, ordem de serviço etc.)."
+            attachments={(completeData.attachments || []) as MaintenanceAttachment[]}
+            selectedFileType={selectedFileType}
+            setSelectedFileType={setSelectedFileType}
+            inputRef={completeFileInputRef}
+            onUpload={handleUpload}
+            onRemove={removeAttachment}
+            AttachmentTag={AttachmentTag}
+          />
+        </div>
+      </form>
     </BaseModal>
   );
 }

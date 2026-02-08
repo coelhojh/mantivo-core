@@ -1,6 +1,7 @@
 import React from "react";
-import { CheckCircle, Upload, Trash2 } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import BaseModal from "../../../../shared/ui/modal/BaseModal";
+import MaintenanceAttachmentsSection from "../attachments/MaintenanceAttachmentsSection";
 
 type Props = {
   open: boolean;
@@ -121,7 +122,7 @@ export default function MaintenanceCompleteModal({
                       }))
                     }
                     required
-                  />
+            />
                 </div>
 
                 <div>
@@ -139,7 +140,7 @@ export default function MaintenanceCompleteModal({
                       )
                     }
                     placeholder="R$ 0,00"
-                  />
+            />
                   <p className="mt-1.5 text-xs text-slate-500">
                     Se preferir, deixe em branco e ajuste depois.
                   </p>
@@ -176,7 +177,7 @@ export default function MaintenanceCompleteModal({
                       }))
                     }
                     placeholder="Ex: João Silva"
-                  />
+            />
                 </div>
 
                 <div>
@@ -194,7 +195,7 @@ export default function MaintenanceCompleteModal({
                       }))
                     }
                     placeholder="Ex: Técnico responsável"
-                  />
+            />
                 </div>
 
                 <div>
@@ -212,7 +213,7 @@ export default function MaintenanceCompleteModal({
                       }))
                     }
                     placeholder="ex@empresa.com"
-                  />
+            />
                 </div>
 
                 <div>
@@ -230,118 +231,26 @@ export default function MaintenanceCompleteModal({
                       }))
                     }
                     placeholder="(71) 9xxxx-xxxx"
-                  />
+            />
                 </div>
               </div>
             </div>
           </div>
 
           {/* SEÇÃO: Anexos */}
-          <div className="rounded-2xl border border-slate-200 bg-white">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <p className="text-xs font-semibold text-slate-700">Anexos</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Adicione evidências (NF, fotos, laudo, ordem de serviço etc.).
-              </p>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3 items-start">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                    Tipo do anexo
-                  </label>
-                  <select
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-slate-200"
-                    value={selectedFileType}
-                    onChange={(e) => setSelectedFileType(e.target.value)}
-                  >
-                    <option value={AttachmentType.BUDGET}>Orçamento</option>
-                    <option value={AttachmentType.INVOICE}>Nota fiscal</option>
-                    <option value={AttachmentType.ART_RRT}>ART/RRT</option>
-                    <option value={AttachmentType.SERVICE_ORDER}>Ordem de Serviço</option>
-                    <option value={AttachmentType.PHOTOS}>Fotos</option>
-                    <option value={AttachmentType.TECHNICAL_REPORT}>Laudo</option>
-                    <option value={AttachmentType.MAINTENANCE_REPORT}>Relatório</option>
-                    <option value={AttachmentType.CERTIFICATE}>Certificado</option>
-                    <option value={AttachmentType.OTHER}>Outro</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                    Arquivos
-                  </label>
-
-                  <input
-                    ref={completeFileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, true)}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => completeFileInputRef.current?.click()}
-                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100
- px-4 py-3 text-left hover:bg-slate-100 transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                        <Upload size={16} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">
-                          Adicionar arquivos
-                        </p>
-                        <p className="text-xs text-slate-500 truncate">
-                          Clique para selecionar 1 ou mais arquivos
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {completeData.attachments?.length ? (
-                <div className="space-y-2">
-                  {completeData.attachments.map((a, idx) => (
-                    <div
-                      key={`${a.fileName}-${idx}`}
-                      className="grid grid-cols-[140px_1fr_auto] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                    >
-                      <div className="flex items-center">
-                        <AttachmentTag type={(a.type as any) ?? AttachmentType.OTHER} />
-                      </div>
-
-                      <p className="text-sm font-semibold text-slate-800 truncate min-w-0">
-                        {a.fileName}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(idx, true)}
-                        className="p-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
-                        title="Remover"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
-                  <p className="text-sm text-slate-600">Nenhum anexo adicionado.</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Dica: adicione pelo menos fotos ou nota fiscal para registrar a execução.
-                  </p>
-                </div>
-              )}
-            </div>
+            <MaintenanceAttachmentsSection
+              title="Anexos"
+              subtitle="Adicione evidências (NF, fotos, laudo, ordem de serviço etc.)."
+              attachments={(completeData.attachments || []) as any}
+              selectedFileType={selectedFileType}
+              setSelectedFileType={setSelectedFileType}
+              inputRef={completeFileInputRef}
+              onUpload={(e) => handleFileUpload(e, true)}
+              onRemove={(idx) => removeAttachment(idx, true)}
+              AttachmentTag={AttachmentTag as any}
+            />
           </div>
-        </div>
-      </form>
+        </form>
     </BaseModal>
   );
 }

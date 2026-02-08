@@ -1,7 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
-import { AttachmentType } from "../../../../ai/types";
-import type { MaintenanceAttachment } from "../../../../ai/types";
+import { AttachmentType, MaintenanceAttachment } from "../../../../ai/types";
 
 type Props = {
   title?: string;

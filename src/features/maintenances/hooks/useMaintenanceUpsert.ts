@@ -22,7 +22,31 @@ type SubmitArgs = {
   onError?: (message: string, error?: unknown) => void;
 };
 
-export function useMaintenanceUpsert() {
+type UpsertControllerDeps = {
+  canEdit: boolean;
+  checkPlanLimits: (resource: string) => Promise<boolean>;
+  setShowUpgradeModal: (open: boolean) => void;
+
+  setShowModal: (open: boolean) => void;
+  setFormData: (data: any) => void;
+
+  getEmptyMaintenanceFormData: () => any;
+  getFormDataFromMaintenance: (m: Maintenance, sortedAttachments: any[]) => any;
+  sortAttachments: (attachments: any[]) => any[];
+};
+
+export function useMaintenanceUpsert(deps: UpsertControllerDeps) {
+  const {
+    canEdit,
+    checkPlanLimits,
+    setShowUpgradeModal,
+    setShowModal,
+    setFormData,
+    getEmptyMaintenanceFormData,
+    getFormDataFromMaintenance,
+    sortAttachments,
+  } = deps;
+
   const [mode, setMode] = useState<UpsertMode>("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,10 +66,52 @@ export function useMaintenanceUpsert() {
     setEditingId(id);
   }, []);
 
-  const cancelEdit = useCallback(() => {
-    setMode("create");
-    setEditingId(null);
-  }, []);
+  const close = useCallback(() => {
+    setShowModal(false);
+    startCreate();
+    setFormData(getEmptyMaintenanceFormData());
+  }, [getEmptyMaintenanceFormData, setFormData, setShowModal, startCreate]);
+
+  const openCreate = useCallback(async () => {
+    if (!canEdit) return;
+
+    const allowed = await checkPlanLimits("maintenance");
+    if (!allowed) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    setFormData(getEmptyMaintenanceFormData());
+    startCreate();
+    setShowModal(true);
+  }, [
+    canEdit,
+    checkPlanLimits,
+    getEmptyMaintenanceFormData,
+    setFormData,
+    setShowModal,
+    setShowUpgradeModal,
+    startCreate,
+  ]);
+
+  const openEdit = useCallback(
+    async (maintenance: Maintenance) => {
+      if (!canEdit) return;
+
+      const sortedAttachments = sortAttachments(maintenance.attachments || []);
+      setFormData(getFormDataFromMaintenance(maintenance, sortedAttachments));
+      startEdit(maintenance.id);
+      setShowModal(true);
+    },
+    [
+      canEdit,
+      getFormDataFromMaintenance,
+      setFormData,
+      setShowModal,
+      sortAttachments,
+      startEdit,
+    ]
+  );
 
   const submit = useCallback(
     async (args: SubmitArgs) => {
@@ -61,8 +127,12 @@ export function useMaintenanceUpsert() {
         onError,
       } = args;
 
-      // validação mínima (mantém comportamento do componente)
-      if (!formData?.title || !formData?.condoId || !formData?.category || !formData?.type) {
+      if (
+        !formData?.title ||
+        !formData?.condoId ||
+        !formData?.category ||
+        !formData?.type
+      ) {
         onError?.("Preencha os campos obrigatórios.");
         return;
       }
@@ -101,7 +171,9 @@ export function useMaintenanceUpsert() {
         onSuccess();
         startCreate();
       } catch (e: any) {
-        const msg = e?.message ? `Erro ao salvar: ${e.message}` : "Erro ao salvar.";
+        const msg = e?.message
+          ? `Erro ao salvar: ${e.message}`
+          : "Erro ao salvar.";
         onError?.(msg, e);
       } finally {
         setIsSubmitting(false);
@@ -117,7 +189,9 @@ export function useMaintenanceUpsert() {
     isSubmitting,
     startCreate,
     startEdit,
-    cancelEdit,
+    openCreate,
+    openEdit,
+    close,
     submit,
   };
 }

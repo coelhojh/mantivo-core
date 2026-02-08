@@ -246,7 +246,6 @@ const MaintenanceList: React.FC = () => {
     providerPhone: "",
     attachments: [] as MaintenanceAttachment[],
   });
-  const upsert = useMaintenanceUpsert();
   const [selectedFileType, setSelectedFileType] = useState<AttachmentType>(
     AttachmentType.BUDGET,
   );
@@ -264,6 +263,35 @@ const MaintenanceList: React.FC = () => {
     user?.role === "admin" ||
     user?.role === "super_admin" ||
     user?.permissions?.canDelete;
+
+
+  const sortAttachments = (
+    attachments: MaintenanceAttachment[],
+  ): MaintenanceAttachment[] => {
+    return [...attachments].sort((a, b) => {
+      const priorityA = DOC_TYPE_PRIORITY[a.type] || 99;
+      const priorityB = DOC_TYPE_PRIORITY[b.type] || 99;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+
+      const timeA = parseUploadDate(a.uploadDate).getTime();
+      const timeB = parseUploadDate(b.uploadDate).getTime();
+      const safeA = Number.isFinite(timeA) ? timeA : 0;
+      const safeB = Number.isFinite(timeB) ? timeB : 0;
+      return safeB - safeA;
+    });
+  };
+
+
+  const upsert = useMaintenanceUpsert({
+    canEdit,
+    checkPlanLimits,
+    setShowUpgradeModal,
+    setShowModal,
+    setFormData,
+    getEmptyMaintenanceFormData,
+    getFormDataFromMaintenance,
+    sortAttachments,
+  });
 
   useEffect(() => {
     refreshData();
@@ -307,25 +335,6 @@ const MaintenanceList: React.FC = () => {
     const value = e.target.value.replace(/\D/g, "");
     const numericValue = parseInt(value, 10) / 100;
     setter(numericValue || 0);
-  };
-
-  const handleOpenModal = async (maintenance?: Maintenance) => {
-    if (!canEdit) return;
-
-    if (maintenance) {
-      const sortedAttachments = sortAttachments(maintenance.attachments || []);
-      setFormData(getFormDataFromMaintenance(maintenance, sortedAttachments));
-      upsert.startEdit(maintenance.id);
-    } else {
-      const allowed = await checkPlanLimits("maintenance");
-      if (!allowed) {
-        setShowUpgradeModal(true);
-        return;
-      }
-        setFormData(getEmptyMaintenanceFormData());
-      upsert.startCreate();
-    }
-    setShowModal(true);
   };
 
   const handleOpenViewModal = (item: Maintenance) => {
@@ -399,23 +408,6 @@ const MaintenanceList: React.FC = () => {
     providerPhone: "",
   }));
 };
-
-  const sortAttachments = (
-    attachments: MaintenanceAttachment[],
-  ): MaintenanceAttachment[] => {
-    return [...attachments].sort((a, b) => {
-      const priorityA = DOC_TYPE_PRIORITY[a.type] || 99;
-      const priorityB = DOC_TYPE_PRIORITY[b.type] || 99;
-      if (priorityA !== priorityB) return priorityA - priorityB;
-
-      const timeA = parseUploadDate(a.uploadDate).getTime();
-      const timeB = parseUploadDate(b.uploadDate).getTime();
-      const safeA = Number.isFinite(timeA) ? timeA : 0;
-      const safeB = Number.isFinite(timeB) ? timeB : 0;
-      return safeB - safeA;
-    });
-  };
-
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
     isCompleteModal: boolean = false,
@@ -710,7 +702,7 @@ const MaintenanceList: React.FC = () => {
 
         {canEdit && (
           <button
-            onClick={() => handleOpenModal()}
+            onClick={() => upsert.openCreate()}
             className="px-6 py-3 rounded-2xl transition-all shadow-lg font-semibold active:scale-95 flex items-center gap-2"
             style={{ background: "rgb(var(--primary))", color: "white" }}
           >
@@ -914,7 +906,7 @@ const MaintenanceList: React.FC = () => {
 
                                   {canEdit && (
                                     <button
-                                      onClick={() => handleOpenModal(item)}
+                                      onClick={() => upsert.openEdit(item)}
                                       className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
                                       title="Editar"
                                     >
@@ -1185,7 +1177,7 @@ const MaintenanceList: React.FC = () => {
 
                           {canEdit && (
                             <button
-                              onClick={() => handleOpenModal(item)}
+                              onClick={() => upsert.openEdit(item)}
                               className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all shadow-sm"
                               title="Editar"
                             >
@@ -1256,7 +1248,7 @@ const MaintenanceList: React.FC = () => {
         onClose={() => setShowViewModal(false)}
         onEdit={(it) => {
           setShowViewModal(false);
-          handleOpenModal(it);
+          upsert.openEdit(it);
         }}
         getStatus3={getStatus3}
         STATUS3_LABEL={STATUS3_LABEL}
@@ -1284,11 +1276,7 @@ const MaintenanceList: React.FC = () => {
         handleFileUpload={handleFileUpload}
         removeAttachment={removeAttachment}
         AttachmentTag={AttachmentTag}
-        onClose={() => {
-            setShowModal(false);
-            upsert.startCreate();
-            setFormData(getEmptyMaintenanceFormData());
-          }}
+        onClose={() => upsert.close()}
         onSubmit={handleSave}
       />
       {showCompleteModal && itemToComplete && (

@@ -2,6 +2,8 @@ import React from "react";
 import { CheckCircle } from "lucide-react";
 import BaseModal from "../../../../shared/ui/modal/BaseModal";
 import MaintenanceAttachmentsSection from "../attachments/MaintenanceAttachmentsSection";
+import type { AttachmentType, MaintenanceAttachment } from "../../../../ai/types";
+import type { MaintenanceCompleteData } from "../../types/MaintenanceCompleteData";
 
 type Props = {
   open: boolean;
@@ -12,25 +14,17 @@ type Props = {
   isCompleting: boolean;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
 
-  completeData: {
-    date: string;
-    cost: any;
-    providerName: string;
-    providerContact: string;
-    providerEmail: string;
-    providerPhone: string;
-    attachments?: Array<{ fileName: string; type?: any }>;
-  };
-  setCompleteData: React.Dispatch<React.SetStateAction<any>>;
+  completeData: MaintenanceCompleteData;
+  setCompleteData: React.Dispatch<React.SetStateAction<MaintenanceCompleteData>>;
 
-  formatBRL: (value: any) => string;
+  formatBRL: (value: number) => string;
   handleCurrencyInputChange: (
     e: React.ChangeEvent<HTMLInputElement>,
-    onValue: (val: any) => void
+    onValue: (val: number) => void
   ) => void;
 
-  selectedFileType: any;
-  setSelectedFileType: (v: any) => void;
+  selectedFileType: AttachmentType;
+  setSelectedFileType: (v: AttachmentType) => void;
 
   completeFileInputRef: React.RefObject<HTMLInputElement>;
   handleFileUpload: (
@@ -40,8 +34,7 @@ type Props = {
 
   removeAttachment: (idx: number, isComplete: boolean) => void;
 
-  AttachmentTag: React.ComponentType<{ type: any }>;
-  AttachmentType: any;
+  AttachmentTag: React.ComponentType<{ type: AttachmentType }>;
 };
 
 export default function MaintenanceCompleteModal({
@@ -60,7 +53,7 @@ export default function MaintenanceCompleteModal({
   handleFileUpload,
   removeAttachment,
   AttachmentTag,
-  AttachmentType,
+
 }: Props) {
   if (!itemToComplete) return null;
 
@@ -241,13 +234,13 @@ export default function MaintenanceCompleteModal({
             <MaintenanceAttachmentsSection
               title="Anexos"
               subtitle="Adicione evidências (NF, fotos, laudo, ordem de serviço etc.)."
-              attachments={(completeData.attachments || []) as any}
+              attachments={(completeData.attachments || []) as MaintenanceAttachment[]}
               selectedFileType={selectedFileType}
               setSelectedFileType={setSelectedFileType}
               inputRef={completeFileInputRef}
               onUpload={(e) => handleFileUpload(e, true)}
               onRemove={(idx) => removeAttachment(idx, true)}
-              AttachmentTag={AttachmentTag as any}
+              AttachmentTag={AttachmentTag}
             />
           </div>
         </form>

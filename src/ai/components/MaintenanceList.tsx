@@ -13,6 +13,7 @@ import MaintenanceUndoModal from "../../features/maintenances/components/modals/
 import MaintenanceViewModal from "../../features/maintenances/components/modals/MaintenanceViewModal";
 import MaintenanceUpsertModal from "./modals/MaintenanceUpsertModal";
 import type { MaintenanceUpsertFormData } from "./maintenance/types";
+import type { MaintenanceCompleteData } from "../../features/maintenances/types/MaintenanceCompleteData";
 import type { FrequencyPreset } from "./maintenance/types";
 
 import {
@@ -237,15 +238,14 @@ const MaintenanceList: React.FC = () => {
     providerEmail: "",
     attachments: [],
   });
-
-  const [completeData, setCompleteData] = useState({
+  const [completeData, setCompleteData] = useState<MaintenanceCompleteData>({
     date: format(new Date(), "yyyy-MM-dd"),
     cost: 0,
     providerName: "",
     providerContact: "",
     providerEmail: "",
     providerPhone: "",
-    attachments: [] as MaintenanceAttachment[],
+    attachments: [],
   });
   const [selectedFileType, setSelectedFileType] = useState<AttachmentType>(
     AttachmentType.BUDGET,
@@ -1272,7 +1272,6 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
           handleFileUpload={handleFileUpload}
           removeAttachment={removeAttachment}
           AttachmentTag={AttachmentTag}
-          AttachmentType={AttachmentType}
         />
       )}
       {showUndoModal && (

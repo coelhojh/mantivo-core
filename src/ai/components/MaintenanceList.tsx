@@ -1252,8 +1252,8 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
         formatBRL={formatBRL}
         handleCurrencyInputChange={handleCurrencyInputChange}
         handleProviderChange={handleProviderChange}
-        selectedFileType={selectedFileTypeUpsert}
-        setSelectedFileType={setSelectedFileTypeUpsert}
+        selectedFileType={selectedFileTypeComplete}
+        setSelectedFileType={setSelectedFileTypeComplete}
         fileInputRef={fileInputRef}
         handleFileUpload={handleFileUpload}
         removeAttachment={removeAttachment}

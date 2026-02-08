@@ -1,22 +1,8 @@
 import React from "react";
 import { X } from "lucide-react";
-import { AttachmentType, MaintenanceAttachment } from "../../../../ai/types";
+import { AttachmentType } from "../../../../ai/types";
+import type { MaintenanceAttachmentsSectionProps } from "./types";
 
-type Props = {
-  title?: string;
-  subtitle?: string;
-
-  attachments: MaintenanceAttachment[];
-
-  selectedFileType: AttachmentType;
-  setSelectedFileType: (v: AttachmentType) => void;
-
-  inputRef: React.RefObject<HTMLInputElement>;
-  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onRemove: (idx: number) => void;
-
-  AttachmentTag: React.ComponentType<{ type: AttachmentType }>;
-};
 
 export default function MaintenanceAttachmentsSection({
   title = "Anexos",
@@ -28,7 +14,7 @@ export default function MaintenanceAttachmentsSection({
   onUpload,
   onRemove,
   AttachmentTag,
-}: Props) {
+}: MaintenanceAttachmentsSectionProps) {
   return (
     <div className="rounded-2xl border border-indigo-200 bg-indigo-50">
       <div className="px-5 py-4 border-b border-indigo-200/60">

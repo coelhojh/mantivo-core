@@ -60,3 +60,7 @@ Thumbs.db
 # Incoming / Backup / Experimental
 # =========================
 _incoming/
+
+# local backups
+*.bak
+*.bak2

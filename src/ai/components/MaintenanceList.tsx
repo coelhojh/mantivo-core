@@ -1,4 +1,3 @@
-import BaseModal from "../../shared/ui/modal/BaseModal";
 import UpgradeModal from "./UpgradeModal";
 import { useMaintenanceUpsert } from "../../features/maintenances/hooks/useMaintenanceUpsert";
 import { useMaintenanceAttachments } from "../../features/maintenances/hooks/useMaintenanceAttachments";

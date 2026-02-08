@@ -1,5 +1,6 @@
 import BaseModal from "../../shared/ui/modal/BaseModal";
 import UpgradeModal from "./UpgradeModal";
+import { useMaintenanceUpsert } from "../../features/maintenances/hooks/useMaintenanceUpsert";
 import { buildMaintenancePayload } from "./maintenance/mappers/buildMaintenancePayload";
 import { resolveFrequencyPreset } from "./maintenance/mappers/resolveFrequencyPreset";
 import { getEmptyMaintenanceFormData } from "./maintenance/mappers/getEmptyMaintenanceFormData";
@@ -245,8 +246,7 @@ const MaintenanceList: React.FC = () => {
     providerPhone: "",
     attachments: [] as MaintenanceAttachment[],
   });
-  const [editingId, setEditingId] = useState<string | null>(null);
-
+  const upsert = useMaintenanceUpsert();
   const [selectedFileType, setSelectedFileType] = useState<AttachmentType>(
     AttachmentType.BUDGET,
   );
@@ -315,7 +315,7 @@ const MaintenanceList: React.FC = () => {
     if (maintenance) {
       const sortedAttachments = sortAttachments(maintenance.attachments || []);
       setFormData(getFormDataFromMaintenance(maintenance, sortedAttachments));
-      setEditingId(maintenance.id);
+      upsert.startEdit(maintenance.id);
     } else {
       const allowed = await checkPlanLimits("maintenance");
       if (!allowed) {
@@ -323,7 +323,7 @@ const MaintenanceList: React.FC = () => {
         return;
       }
         setFormData(getEmptyMaintenanceFormData());
-      setEditingId(null);
+      upsert.startCreate();
     }
     setShowModal(true);
   };
@@ -471,48 +471,20 @@ const MaintenanceList: React.FC = () => {
   };
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      !formData.title ||
-      !formData.condoId ||
-      !formData.category ||
-      !formData.type
-    ) {
-      alert("Preencha os campos obrigatórios.");
-      return;
-    }
+      e.preventDefault();
 
-    const resolvedFrequency = resolveFrequencyPreset(
-      frequencyPreset,
-      formData.type as MaintenanceType,
-    );
-
-    const payload = buildMaintenancePayload({
-      formData,
-      frequencyPreset: resolvedFrequency,
-      selectedFileType,
-    });
-
-    try {
-      const base = editingId ? items.find((m) => m.id === editingId) : null;
-
-      if (editingId && !base) {
-        alert("Não foi possível localizar a manutenção para atualizar.");
-        return;
-      }
-
-      if (editingId) {
-        await updateMaintenance({ ...(base as Maintenance), ...payload, id: (base as Maintenance).id });
-      } else {
-        await saveMaintenance(payload);
-      }
-
-      setShowModal(false);
-      refreshData();
-    } catch (error: any) {
-      alert(`Erro ao salvar: ${error.message}`);
-    }
-  };
+      await upsert.submit({
+        formData,
+        frequencyPreset,
+        selectedFileType,
+        items,
+        resolveFrequencyPreset,
+        buildMaintenancePayload,
+        onClose: () => setShowModal(false),
+        onSuccess: () => refreshData(),
+        onError: (message) => alert(message),
+      });
+    };
 
   const handleCompleteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1294,7 +1266,7 @@ const MaintenanceList: React.FC = () => {
       />
       <MaintenanceUpsertModal
         open={!!showModal}
-        editingId={editingId}
+        editingId={upsert.editingId}
         formData={formData}
         setFormData={setFormData}
         condos={condos}
@@ -1312,7 +1284,11 @@ const MaintenanceList: React.FC = () => {
         handleFileUpload={handleFileUpload}
         removeAttachment={removeAttachment}
         AttachmentTag={AttachmentTag}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+            setShowModal(false);
+            upsert.startCreate();
+            setFormData(getEmptyMaintenanceFormData());
+          }}
         onSubmit={handleSave}
       />
       {showCompleteModal && itemToComplete && (

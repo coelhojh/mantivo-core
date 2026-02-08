@@ -1,6 +1,7 @@
 import BaseModal from "../../shared/ui/modal/BaseModal";
 import UpgradeModal from "./UpgradeModal";
 import { useMaintenanceUpsert } from "../../features/maintenances/hooks/useMaintenanceUpsert";
+import { useMaintenanceAttachments } from "../../features/maintenances/hooks/useMaintenanceAttachments";
 import { buildMaintenancePayload } from "./maintenance/mappers/buildMaintenancePayload";
 import { resolveFrequencyPreset } from "./maintenance/mappers/resolveFrequencyPreset";
 import { getEmptyMaintenanceFormData } from "./maintenance/mappers/getEmptyMaintenanceFormData";
@@ -293,6 +294,9 @@ const MaintenanceList: React.FC = () => {
     sortAttachments,
   });
 
+  const attachmentsCtrl = useMaintenanceAttachments({ sortAttachments });
+
+
   useEffect(() => {
     refreshData();
   }, []);
@@ -408,59 +412,31 @@ const MaintenanceList: React.FC = () => {
     providerPhone: "",
   }));
 };
-  const handleFileUpload = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    isCompleteModal: boolean = false,
-  ) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+const handleFileUpload = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  isCompleteModal: boolean = false,
+) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
 
-    const newItems: MaintenanceAttachment[] = Array.from(files).map(
-      (file: any) => ({
-        fileName: file.name,
-        type: selectedFileType,
-        url: "#",
-        uploadDate: new Date().toISOString(),
-      }),
-    );
+  const newItems = attachmentsCtrl.buildNewItems(files, selectedFileType);
 
-    if (isCompleteModal) {
-      setCompleteData((prev) => ({
-        ...prev,
-        attachments: sortAttachments([
-          ...(prev.attachments || []),
-          ...newItems,
-        ]),
-      }));
-      if (completeFileInputRef.current) completeFileInputRef.current.value = "";
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        attachments: sortAttachments([
-          ...(prev.attachments || []),
-          ...newItems,
-        ]),
-      }));
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
+  if (isCompleteModal) {
+    attachmentsCtrl.appendTo(setCompleteData, newItems);
+    attachmentsCtrl.resetInput(completeFileInputRef);
+  } else {
+    attachmentsCtrl.appendTo(setFormData, newItems);
+    attachmentsCtrl.resetInput(fileInputRef);
+  }
+};
 
-  const removeAttachment = (
-    index: number,
-    isCompleteModal: boolean = false,
-  ) => {
-    if (isCompleteModal) {
-      setCompleteData((prev) => ({
-        ...prev,
-        attachments: (prev.attachments || []).filter((_, i) => i !== index),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        attachments: (prev.attachments || []).filter((_, i) => i !== index),
-      }));
-    }
-  };
+const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
+  if (isCompleteModal) {
+    attachmentsCtrl.removeAt(setCompleteData, index);
+  } else {
+    attachmentsCtrl.removeAt(setFormData, index);
+  }
+};
 
   const handleSave = async (e: React.FormEvent) => {
       e.preventDefault();

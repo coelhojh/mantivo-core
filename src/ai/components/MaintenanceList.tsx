@@ -247,9 +247,12 @@ const MaintenanceList: React.FC = () => {
     providerPhone: "",
     attachments: [],
   });
-  const [selectedFileType, setSelectedFileType] = useState<AttachmentType>(
-    AttachmentType.BUDGET,
-  );
+  const [selectedFileTypeUpsert, setSelectedFileTypeUpsert] = useState<AttachmentType>(
+  AttachmentType.BUDGET,
+);
+const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<AttachmentType>(
+  AttachmentType.BUDGET,
+);
   const [frequencyPreset, setFrequencyPreset] =
     useState<FrequencyPreset>("MONTHLY");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -419,7 +422,10 @@ const handleFileUpload = (
   const files = e.target.files;
   if (!files || files.length === 0) return;
 
-  const newItems = attachmentsCtrl.buildNewItems(files, selectedFileType);
+  const newItems = attachmentsCtrl.buildNewItems(
+    files,
+    isCompleteModal ? selectedFileTypeComplete : selectedFileTypeUpsert,
+  );
 
   if (isCompleteModal) {
     attachmentsCtrl.appendTo(setCompleteData, newItems);
@@ -444,7 +450,7 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
       await upsert.submit({
         formData,
         frequencyPreset,
-        selectedFileType,
+        selectedFileType: selectedFileTypeUpsert,
         items,
         resolveFrequencyPreset,
         buildMaintenancePayload,
@@ -1246,8 +1252,8 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
         formatBRL={formatBRL}
         handleCurrencyInputChange={handleCurrencyInputChange}
         handleProviderChange={handleProviderChange}
-        selectedFileType={selectedFileType}
-        setSelectedFileType={setSelectedFileType}
+        selectedFileType={selectedFileTypeUpsert}
+        setSelectedFileType={setSelectedFileTypeUpsert}
         fileInputRef={fileInputRef}
         handleFileUpload={handleFileUpload}
         removeAttachment={removeAttachment}
@@ -1266,8 +1272,8 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
           setCompleteData={setCompleteData}
           formatBRL={formatBRL}
           handleCurrencyInputChange={handleCurrencyInputChange}
-          selectedFileType={selectedFileType}
-          setSelectedFileType={setSelectedFileType}
+          selectedFileType={selectedFileTypeComplete}
+          setSelectedFileType={setSelectedFileTypeComplete}
           completeFileInputRef={completeFileInputRef}
           handleFileUpload={handleFileUpload}
           removeAttachment={removeAttachment}

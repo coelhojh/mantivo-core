@@ -2,6 +2,7 @@ import BaseModal from "../../shared/ui/modal/BaseModal";
 import UpgradeModal from "./UpgradeModal";
 import { useMaintenanceUpsert } from "../../features/maintenances/hooks/useMaintenanceUpsert";
 import { useMaintenanceAttachments } from "../../features/maintenances/hooks/useMaintenanceAttachments";
+import { useMaintenanceComplete } from "../../features/maintenances/hooks/useMaintenanceComplete";
 import { buildMaintenancePayload } from "./maintenance/mappers/buildMaintenancePayload";
 import { resolveFrequencyPreset } from "./maintenance/mappers/resolveFrequencyPreset";
 import { getEmptyMaintenanceFormData } from "./maintenance/mappers/getEmptyMaintenanceFormData";
@@ -32,8 +33,6 @@ import {
   saveMaintenance,
   updateMaintenance,
   deleteMaintenance,
-  completeMaintenance,
-  undoCompleteMaintenance,
   getCondos,
   getCategories,
   checkPlanLimits,
@@ -220,8 +219,7 @@ const MaintenanceList: React.FC = () => {
   const [itemToView, setItemToView] = useState<Maintenance | null>(null);
 
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [isUndoing, setIsUndoing] = useState<string | null>(null);
+  const { complete, undo, isCompletingId } = useMaintenanceComplete();
 
   const [formData, setFormData] = useState<MaintenanceUpsertFormData>({
     title: "",
@@ -373,22 +371,19 @@ const [selectedFileTypeComplete, setSelectedFileTypeComplete] = useState<Attachm
   };
 
   const handleConfirmUndo = async () => {
-    if (!itemToUndo) return;
-    if (isUndoing) return;
+  if (!itemToUndo) return;
+  if (isCompletingId === itemToUndo.id) return;
 
-    setIsUndoing(itemToUndo.id);
-    try {
-      await undoCompleteMaintenance(itemToUndo.id);
-      await refreshData();
+  try {
+    await undo(itemToUndo.id);
+    await refreshData();
 
-      setShowUndoModal(false);
-      setItemToUndo(null);
-    } catch (e) {
-      alert("Erro ao desfazer conclusão.");
-    } finally {
-      setIsUndoing(null);
-    }
-  };
+    setShowUndoModal(false);
+    setItemToUndo(null);
+  } catch (e) {
+    alert("Erro ao desfazer conclusão.");
+  }
+};
 
   const handleProviderChange = (providerId: string) => {
   const selected = providers.find((p: any) => p.id === providerId);
@@ -461,31 +456,32 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
     };
 
   const handleCompleteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!itemToComplete) return;
-    setIsCompleting(true);
-    try {
-      await completeMaintenance(
-        itemToComplete.id,
-        completeData.date,
-        completeData.cost,
-        completeData.attachments || [],
-        {
-          name: completeData.providerName,
-          contact: completeData.providerContact,
-          email: completeData.providerEmail,
-          phone: completeData.providerPhone,
-        },
-      );
-      setShowCompleteModal(false);
-      refreshData();
-    } catch (error: any) {
-      alert("Erro ao concluir manutenção.");
-    } finally {
-      setIsCompleting(false);
-      setItemToComplete(null);
-    }
-  };
+  e.preventDefault();
+  if (!itemToComplete) return;
+  if (isCompletingId === itemToComplete.id) return;
+
+  try {
+    await complete({
+      id: itemToComplete.id,
+      date: completeData.date,
+      cost: completeData.cost,
+      attachments: completeData.attachments || [],
+      provider: {
+        name: completeData.providerName,
+        contact: completeData.providerContact,
+        email: completeData.providerEmail,
+        phone: completeData.providerPhone,
+      },
+    });
+
+    setShowCompleteModal(false);
+    await refreshData();
+  } catch (error: any) {
+    alert("Erro ao concluir manutenção.");
+  } finally {
+    setItemToComplete(null);
+  }
+};
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
@@ -922,11 +918,11 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
                                       onClick={() =>
                                         handleUndoComplete(item.id)
                                       }
-                                      disabled={isUndoing === item.id}
+                                      disabled={isCompletingId === item.id}
                                       className="p-1.5 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-all"
                                       title="Desfazer Conclusão"
                                     >
-                                      {isUndoing === item.id ? (
+                                      {isCompletingId === item.id ? (
                                         <Loader2
                                           size={13}
                                           className="animate-spin"
@@ -1190,11 +1186,11 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
                                 e.stopPropagation();
                               }}
                               onClick={() => handleUndoComplete(item.id)}
-                              disabled={isUndoing === item.id}
+                              disabled={isCompletingId === item.id}
                               className="relative z-30 p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-all shadow-sm"
                               title="Desfazer Conclusão"
                             >
-                              {isUndoing === item.id ? (
+                              {isCompletingId === item.id ? (
                                 <Loader2 size={16} className="animate-spin" />
                               ) : (
                                 <RotateCcw size={16} />
@@ -1266,7 +1262,7 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
           open={showCompleteModal}
           onClose={() => setShowCompleteModal(false)}
           itemToComplete={itemToComplete}
-          isCompleting={isCompleting}
+          isCompleting={isCompletingId === itemToComplete.id}
           onSubmit={handleCompleteSubmit}
           completeData={completeData}
           setCompleteData={setCompleteData}
@@ -1284,12 +1280,12 @@ const removeAttachment = (index: number, isCompleteModal: boolean = false) => {
         <MaintenanceUndoModal
           open={showUndoModal && !!itemToUndo}
           onClose={() => {
-            if (isUndoing) return;
+            if (isCompletingId) return;
             setShowUndoModal(false);
             setItemToUndo(null);
           }}
           itemToUndo={itemToUndo}
-          isUndoingId={isUndoing}
+          isUndoingId={isCompletingId}
           onConfirm={handleConfirmUndo}
         />
       )}

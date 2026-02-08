@@ -1,5 +1,7 @@
 import BaseModal from "../../shared/ui/modal/BaseModal";
 import UpgradeModal from "./UpgradeModal";
+import { buildMaintenancePayload } from "./maintenance/mappers/buildMaintenancePayload";
+import { resolveFrequencyPreset } from "./maintenance/mappers/resolveFrequencyPreset";
 import React, { useEffect, useRef, useState } from "react";
 import MaintenanceCompleteModal from "../../features/maintenances/components/modals/MaintenanceCompleteModal";
 import MaintenanceDeleteModal from "../../features/maintenances/components/modals/MaintenanceDeleteModal";
@@ -487,15 +489,31 @@ const MaintenanceList: React.FC = () => {
       return;
     }
 
-    const finalData = { ...formData };
-    if (formData.type === MaintenanceType.CORRECTIVE) {
-      finalData.frequencyType = FrequencyType.CUSTOM;
-      finalData.frequencyDays = 0;
-    }
+    const resolvedFrequency = resolveFrequencyPreset(
+      frequencyPreset,
+      formData.type as any,
+    );
+
+    const payload = buildMaintenancePayload({
+      formData,
+      frequencyPreset: resolvedFrequency,
+      selectedFileType,
+    });
 
     try {
-      if (editingId) await updateMaintenance(finalData as Maintenance);
-      else await saveMaintenance(finalData as Maintenance);
+      const base = editingId ? items.find((m) => m.id === editingId) : null;
+
+      if (editingId && !base) {
+        alert("Não foi possível localizar a manutenção para atualizar.");
+        return;
+      }
+
+      if (editingId) {
+        await updateMaintenance({ ...(base as Maintenance), ...payload, id: (base as Maintenance).id });
+      } else {
+        await saveMaintenance(payload);
+      }
+
       setShowModal(false);
       refreshData();
     } catch (error: any) {

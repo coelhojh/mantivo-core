@@ -73,7 +73,6 @@ const App: React.FC = () => {
   try {
     const mod = await import("./services/supabaseClient");
     const cfg = mod.getActiveConfig?.();
-    console.log("[Supabase cfg]", { source: cfg?.source, reason: cfg?.reason, url: cfg?.url });
   } catch {}
 
           if (!supabase) {

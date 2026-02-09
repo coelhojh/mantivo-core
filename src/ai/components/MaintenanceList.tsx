@@ -591,7 +591,7 @@ const MaintenanceList: React.FC = () => {
     {
       id: "ON_TIME",
       title: "Em dia",
-      icon: Clock,
+      icon: null,
       colorClass: "text-blue-600",
       headerBg: "bg-yellow-500",
       headerBorder: "border-blue-200",
@@ -615,6 +615,15 @@ const MaintenanceList: React.FC = () => {
   }
 
   const isCorrective = formData.type === MaintenanceType.CORRECTIVE;
+
+  const CardMeta = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
+    <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+      <span className="inline-flex items-center justify-center [&>svg]:h-4 [&>svg]:w-4 [&>svg]:text-slate-500">
+        {icon}
+      </span>
+      <span className="leading-none">{children}</span>
+    </div>
+  );
 
   return (
     <div className="space-y-6 pb-4 flex flex-col h-full">
@@ -655,7 +664,7 @@ const MaintenanceList: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <div className="relative flex-1 min-w-[200px]">
               <Search
-                className="absolute left-3 top-2.5 text-slate-400"
+                className="absolute left-3 top-2.5 text-slate-900"
                 size={18}
               />
               <input
@@ -799,13 +808,13 @@ const MaintenanceList: React.FC = () => {
                     className="flex-1 flex flex-col min-w-[300px] bg-slate-100/40 rounded-[32px] border border-slate-200/40 overflow-hidden shadow-sm"
                   >
                     <div
-                      className={`p-4 border-b ${col.headerBg} ${col.headerBorder} flex justify-between items-center shrink-0`}
+                      className={`p-4 border-b ${col.headerBg} ${col.headerBorder} relative flex items-center shrink-0`}
                     >
-                      <div className="flex items-center gap-2 font-bold text-white uppercase text-[10px] tracking-wider">
-                        <Icon size={14} className={col.colorClass} />
+                      <div className="absolute inset-0 flex items-center justify-center font-bold text-white uppercase text-[12px] tracking-wider pointer-events-none">
+                        {Icon ? <Icon size={14} className={col.colorClass} /> : null}
                         {col.title}
                       </div>
-                      <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-400 border border-slate-200">
+                      <span className="relative z-10 bg-white px-2 py-0.5 rounded-full text-[12px] font-bold text-slate-900 border border-slate-200">
                         {colItems.length}
                       </span>
                     </div>
@@ -830,13 +839,14 @@ const MaintenanceList: React.FC = () => {
                                 key={item.id}
                                 className={`bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative animate-in fade-in zoom-in-95 duration-200 ${cardBorder}`}
                               >
-                              <div className="flex justify-between items-center mb-2.5 h-6">
+                                <div className="flex flex-col gap-3">
+                              <div className="relative flex items-center min-h-[24px] pr-8">
                                 <span
-                                  className={`shrink-0 text-[8px] font-semibold uppercase px-1.5 py-0.5 rounded-md border ${getTypeClasses(item.type)}`}
+                                  className={`shrink-0 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-md border ${getTypeClasses(item.type)}`}
                                 >
                                   {item.type}
                                 </span>
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0 z-10">
+                                  <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                                     <MaintenanceRowActions
                                       item={item}
                                       canEdit={canEdit}
@@ -853,8 +863,8 @@ const MaintenanceList: React.FC = () => {
                                   </div>
                                 </div>
 
-                              <div className="flex items-center mb-2 min-w-0">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate flex-1">
+                              <div className="flex items-center min-w-0">
+                                <span className="text-[9px] font-bold text-slate-900 uppercase tracking-widest truncate flex-1">
                                   {
                                     condos.find((c) => c.id === item.condoId)
                                       ?.name
@@ -862,64 +872,27 @@ const MaintenanceList: React.FC = () => {
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between gap-3 mb-3">
+                              <div className="flex items-center justify-between gap-3 ">
                                 <h3 className="font-bold text-slate-800 text-sm leading-tight break-words min-w-0">
                                   {item.title}
                                 </h3>
                               </div>
-
-                              <div className="mb-3">
-                                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                                  {item.category}
-                                </span>
-                              </div>
                               <div className="pt-3 border-t border-slate-50 space-y-2">
-                                <div className="flex items-center gap-1.5 text-[10px] text-slate-600">
-                                  <DollarSign
-                                    size={12}
-                                    className={
-                                      isCompleted
-                                        ? "text-emerald-600"
-                                        : "text-blue-500"
-                                    }
-                                  />
-                                  <span className="font-normal">
-                                    {isCompleted
-                                      ? `Execução: ${formatBRL(item.cost)}`
-                                      : `Estimado: ${formatBRL(item.estimatedCost)}`}
-                                  </span>
-                                </div>
+                                <CardMeta icon={<DollarSign />}>
+                                  {isCompleted
+                                    ? `Execução: ${formatBRL(item.cost)}`
+                                    : `Estimado: ${formatBRL(item.estimatedCost)}`}
+                                </CardMeta>
 
                                 <div className="flex items-center justify-between">
-                                  <div
-                                    className={`flex items-center gap-1.5 text-[10px] font-semibold transition-all ${
-                                      isOverdue
-                                        ? "text-red-600"
-                                        : "bg-slate-50 text-slate-500 px-2 py-1 rounded-lg"
-                                    }`}
-                                  >
-                                    <Calendar
-                                      size={12}
-                                      className={
-                                        isOverdue
-                                          ? "text-red-500 shrink-0"
-                                          : "text-slate-300 shrink-0"
-                                      }
-                                    />
-                                    <span className="whitespace-nowrap">
-                                      {isCompleted
-                                        ? "Concl: " +
-                                          safeFormatDate(item.lastExecutionDate)
-                                        : "Venc: " +
-                                          safeFormatDate(
-                                            item.nextExecutionDate,
-                                          )}
-                                    </span>
-                                  </div>
+                                  <CardMeta icon={<Calendar />}>
+                                    {isCompleted
+                                      ? `Concl: ${safeFormatDate(item.lastExecutionDate)}`
+                                      : `Venc: ${safeFormatDate(item.nextExecutionDate)}`}
+                                  </CardMeta>
 
-                                  <div className="flex items-center gap-2 justify-end shrink-0">
-                                    {item.attachments &&
-                                      item.attachments.length > 0 && (
+                                      <div className="min-h-[20px] flex items-center justify-end shrink-0">
+                                      {item.attachments && item.attachments.length > 0 && (
                                         <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">
                                           <Paperclip size={10} />
                                           {item.attachments.length}
@@ -929,11 +902,12 @@ const MaintenanceList: React.FC = () => {
                                 </div>
                               </div>
                             </div>
+                              </div>
                           );
                         })
                       ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-slate-400 py-10 opacity-60">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest">
+                        <div className="h-full flex flex-col items-center justify-center text-slate-900 py-10 opacity-60">
+                          <p className="text-[12px] font-semibold uppercase tracking-widest">
                             Sem itens
                           </p>
                         </div>
@@ -949,22 +923,22 @@ const MaintenanceList: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider w-20">
+                  <th className="px-6 py-4 text-center text-[12px] font-bold text-slate-900 uppercase tracking-wider w-20">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-[12px] font-bold text-slate-900 uppercase tracking-wider">
                     Descrição
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-[12px] font-bold text-slate-900 uppercase tracking-wider">
                     Tipo
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-[12px] font-bold text-slate-900 uppercase tracking-wider">
                     Custos
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-[12px] font-bold text-slate-900 uppercase tracking-wider">
                     Datas
                   </th>
-                  <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-right text-[12px] font-bold text-slate-900 uppercase tracking-wider">
                     Ações
                   </th>
                 </tr>
@@ -995,7 +969,7 @@ const MaintenanceList: React.FC = () => {
                       </td>
 
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 justify-end shrink-0">
+                                      <div className="min-h-[20px] flex items-center justify-end shrink-0">
                           <div className="font-bold text-slate-800 text-sm">
                             {item.title}
                           </div>
@@ -1011,7 +985,7 @@ const MaintenanceList: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="text-[10px] text-slate-400 font-bold uppercase mt-1 flex items-center gap-1">
+                        <div className="text-[12px] text-slate-900 font-bold uppercase mt-1 flex items-center gap-1">
                           <Building size={10} />
                           {condos.find((c) => c.id === item.condoId)?.name}
                         </div>
@@ -1019,7 +993,7 @@ const MaintenanceList: React.FC = () => {
 
                       <td className="px-6 py-4">
                         <span
-                          className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded border ${getTypeClasses(item.type)}`}
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${getTypeClasses(item.type)}`}
                         >
                           {item.type}
                         </span>

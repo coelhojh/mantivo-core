@@ -585,7 +585,7 @@ const MaintenanceList: React.FC = () => {
       title: "Vencidas",
       icon: AlertCircle,
       colorClass: "text-red-600",
-      headerBg: "bg-red-50",
+      headerBg: "bg-red-600",
       headerBorder: "border-red-200",
     },
     {
@@ -593,7 +593,7 @@ const MaintenanceList: React.FC = () => {
       title: "Em dia",
       icon: Clock,
       colorClass: "text-blue-600",
-      headerBg: "bg-blue-50",
+      headerBg: "bg-yellow-500",
       headerBorder: "border-blue-200",
     },
     {
@@ -601,7 +601,7 @@ const MaintenanceList: React.FC = () => {
       title: "Concluídas",
       icon: CheckSquare,
       colorClass: "text-emerald-600",
-      headerBg: "bg-emerald-50",
+      headerBg: "bg-green-600",
       headerBorder: "border-emerald-200",
     },
   ];
@@ -801,7 +801,7 @@ const MaintenanceList: React.FC = () => {
                     <div
                       className={`p-4 border-b ${col.headerBg} ${col.headerBorder} flex justify-between items-center shrink-0`}
                     >
-                      <div className="flex items-center gap-2 font-bold text-slate-600 uppercase text-[10px] tracking-wider">
+                      <div className="flex items-center gap-2 font-bold text-white uppercase text-[10px] tracking-wider">
                         <Icon size={14} className={col.colorClass} />
                         {col.title}
                       </div>
@@ -817,13 +817,19 @@ const MaintenanceList: React.FC = () => {
                           const isCompleted = s3 === "COMPLETED";
                           const isOverdue = s3 === "OVERDUE";
 
+                          const cardBorder = isOverdue
+                            ? "border-l-4 border-l-red-600"
+                            : s3 === "ON_TIME"
+                              ? "border-l-4 border-l-yellow-500"
+                              : "border-l-4 border-l-green-600";
+
                           const statusColor = STATUS3_COLOR_TOKEN[s3];
 
                           return (
                             <div
-                              key={item.id}
-                              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative animate-in fade-in zoom-in-95 duration-200"
-                            >
+                                key={item.id}
+                                className={`bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative animate-in fade-in zoom-in-95 duration-200 ${cardBorder}`}
+                              >
                               <div className="flex justify-between items-center mb-2.5 h-6">
                                 <span
                                   className={`shrink-0 text-[8px] font-semibold uppercase px-1.5 py-0.5 rounded-md border ${getTypeClasses(item.type)}`}

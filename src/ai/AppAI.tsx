@@ -69,6 +69,13 @@ const App: React.FC = () => {
           if (cached) setUser(cached);
 
           const supabase = getSupabase();
+  // DEBUG (temporário): diagnóstico da config do Supabase no Preview
+  try {
+    const mod = await import("./services/supabaseClient");
+    const cfg = mod.getActiveConfig?.();
+    console.log("[Supabase cfg]", { source: cfg?.source, reason: cfg?.reason, url: cfg?.url });
+  } catch {}
+
           if (!supabase) {
             clearTimeout(timeout);
             setAuthChecked(true);

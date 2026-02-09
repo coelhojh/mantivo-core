@@ -897,11 +897,11 @@ const MaintenanceList: React.FC = () => {
                                       size={12}
                                       className={
                                         isOverdue
-                                          ? "text-red-500"
-                                          : "text-slate-300"
+                                          ? "text-red-500 shrink-0"
+                                          : "text-slate-300 shrink-0"
                                       }
                                     />
-                                    <span>
+                                    <span className="whitespace-nowrap">
                                       {isCompleted
                                         ? "Concl: " +
                                           safeFormatDate(item.lastExecutionDate)

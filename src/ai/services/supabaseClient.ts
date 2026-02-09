@@ -16,8 +16,10 @@ import { logger } from "../../shared/observability/logger";
 // =============================================================================
 // ENV (Vite)
 // =============================================================================
-const ENV_SUPABASE_URL: string = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
-const ENV_SUPABASE_ANON_KEY: string = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
+import { env } from "../../shared/env";
+
+const ENV_SUPABASE_URL: string = env.SUPABASE_URL;
+const ENV_SUPABASE_ANON_KEY: string = env.SUPABASE_ANON_KEY;
 
 // =============================================================================
 // LocalStorage keys (UI técnica do Mantivo)

@@ -868,6 +868,11 @@ const MaintenanceList: React.FC = () => {
                                 </h3>
                               </div>
 
+                              <div className="mb-3">
+                                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                  {item.category}
+                                </span>
+                              </div>
                               <div className="pt-3 border-t border-slate-50 space-y-2">
                                 <div className="flex items-center gap-1.5 text-[10px] text-slate-600">
                                   <DollarSign
@@ -912,7 +917,7 @@ const MaintenanceList: React.FC = () => {
                                     </span>
                                   </div>
 
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 justify-end shrink-0">
                                     {item.attachments &&
                                       item.attachments.length > 0 && (
                                         <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">
@@ -920,10 +925,7 @@ const MaintenanceList: React.FC = () => {
                                           {item.attachments.length}
                                         </div>
                                       )}
-                                    <div className="text-[10px] font-bold text-slate-300 uppercase">
-                                      {item.category}
                                     </div>
-                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -993,7 +995,7 @@ const MaintenanceList: React.FC = () => {
                       </td>
 
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 justify-end shrink-0">
                           <div className="font-bold text-slate-800 text-sm">
                             {item.title}
                           </div>

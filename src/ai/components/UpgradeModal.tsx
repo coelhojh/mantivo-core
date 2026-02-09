@@ -1,11 +1,9 @@
-import { logger } from "../../shared/observability/logger";
-
 import React, { useState } from 'react';
 import { Crown, Check, X, Loader2, Star, Zap, Building } from 'lucide-react';
 import { initiatePagBankCheckout } from '../services/paymentService';
 import { PLAN_LIMITS, PlanType } from '../types';
 import { getUser, upgradePlan } from '../services/storageService';
-
+import { logger } from "../../shared/observability/logger";
 interface UpgradeModalProps {
   onClose: () => void;
   reason: 'condo' | 'maintenance' | 'team' | 'general';

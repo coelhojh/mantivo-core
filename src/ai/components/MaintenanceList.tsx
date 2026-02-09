@@ -15,8 +15,6 @@ import MaintenanceUpsertModal from "./modals/MaintenanceUpsertModal";
 import type { MaintenanceUpsertFormData } from "./maintenance/types";
 import type { MaintenanceCompleteData } from "../../features/maintenances/types/MaintenanceCompleteData";
 import type { FrequencyPreset } from "./maintenance/types";
-import { logger } from "../../shared/observability/logger";
-
 import {
   Maintenance,
   MaintenanceStatus,
@@ -83,6 +81,7 @@ import {
   parseISO as parseISODateFns,
 } from "date-fns";
 
+import { logger } from "../../shared/observability/logger";
 // ✅ Status padronizado Mantivo (3 estados)
 import {
   getStatus3,

@@ -1,11 +1,9 @@
-import { logger } from "../../shared/observability/logger";
-
 import React, { useState, useEffect } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
 import { Maintenance, MaintenanceStatus, Condo } from '../types';
 import { format, eachDayOfInterval, isSameMonth, isSameDay, addMonths, isValid, differenceInDays } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Tag, Loader2, Printer, Building, Clock, Wrench } from 'lucide-react';
-
+import { logger } from "../../shared/observability/logger";
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const endOfMonth = (d: Date) => {
     const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
@@ -77,7 +75,7 @@ const CalendarView: React.FC = () => {
       try {
         const [m, c] = await Promise.all([getMaintenances(), getCondos()]);
         setItems(m); setCondos(c);
-      } catch (e) { logger.error("Error", e); } finally { setLoading(false); }
+      } catch (e) { logger.error("Unexpected error", e); } finally { setLoading(false); }
     };
     load();
   }, []);

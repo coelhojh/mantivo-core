@@ -1,6 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "../../shared/observability/logger";
-
 /**
  * Mantivo — Supabase Client Definitivo
  *

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import {
-import { logger } from "../../../shared/observability/logger";
   completeMaintenance,
   undoCompleteMaintenance,
 } from "../../../ai/services/storageService";
 
+import { logger } from "../../../shared/observability/logger";
 export type CompleteMaintenancePayload = {
   id: string;
   date: string; // yyyy-mm-dd (padrão do seu storageService)

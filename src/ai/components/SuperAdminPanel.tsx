@@ -1,11 +1,9 @@
-import { logger } from "../../shared/observability/logger";
-
 import React, { useState, useEffect } from 'react';
 import { getAllTenants, updateTenantPlan, getUser } from '../services/storageService';
 import { ShieldAlert, Users, DollarSign, Search, Edit2, Check, X, Loader2, TrendingUp, Building } from 'lucide-react';
 import { PLAN_LIMITS } from '../types';
 import { format } from 'date-fns';
-
+import { logger } from "../../shared/observability/logger";
 const SuperAdminPanel: React.FC = () => {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +18,7 @@ const SuperAdminPanel: React.FC = () => {
     try {
         const data = await getAllTenants();
         setTenants(data);
-    } catch (e) { logger.error("Error", e); } finally { setLoading(false); }
+    } catch (e) { logger.error("Unexpected error", e); } finally { setLoading(false); }
   };
 
   const filteredTenants = tenants.filter(t => 

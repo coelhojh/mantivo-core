@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
 import { Maintenance, Condo } from '../types';
 import {
-import { logger } from "../../shared/observability/logger";
   BarChart,
   Bar,
   XAxis,
@@ -29,6 +28,7 @@ import {
 import { differenceInDays, format, isValid } from 'date-fns';
 import UpgradeModal from './UpgradeModal';
 
+import { logger } from "../../shared/observability/logger";
 /* ============================================================================
    Helpers
 ============================================================================ */

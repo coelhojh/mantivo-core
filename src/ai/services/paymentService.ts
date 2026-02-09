@@ -1,9 +1,7 @@
-import { logger } from "../../shared/observability/logger";
-
 import { getSupabase } from './supabaseClient';
 import { getUser } from './storageService';
 import { PlanType } from '../types';
-
+import { logger } from "../../shared/observability/logger";
 /**
  * SERVICE DE PAGAMENTOS (Integração PagBank via Supabase Edge Functions)
  */

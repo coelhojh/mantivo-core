@@ -1,9 +1,7 @@
-import { logger } from "../../shared/observability/logger";
-
 import { getSupabase } from './supabaseClient';
 import { User, Condo, Maintenance, MaintenanceStatus, FrequencyType, MaintenanceType, Category, PLAN_LIMITS, PlanType, NotificationPreferences, UserPermissions, MaintenanceAttachment, AttachmentType, Provider } from '../types';
 import { addDays, addMonths, addYears, differenceInCalendarDays, format, isValid } from 'date-fns';
-
+import { logger } from "../../shared/observability/logger";
 // --- HELPERS ---
 
 // Fix: Added local parseISO helper as it is not exported by date-fns in this environment
@@ -15,13 +13,13 @@ const parseISO = (dateStr: string | undefined | null): Date => {
 };
 
 const handleError = (error: any, context: string) => {
-    logger.error("Error", `Error in ${context}:`, error);
     let msg = "Erro desconhecido";
     if (typeof error === 'string') msg = error;
     else if (error instanceof Error) msg = error.message;
     else if (typeof error === 'object' && error !== null) {
         msg = (error as any).message || (error as any).error_description || JSON.stringify(error);
     }
+    logger.error("StorageService error", error, { context });
     throw new Error(msg);
 };
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSidebarState } from '../shared/hooks/useSidebarState';
 import {
-import { logger } from "../shared/observability/logger";
   LayoutDashboard,
   Calendar,
   Wrench,
@@ -37,6 +36,7 @@ import SetupDatabase from './components/SetupDatabase';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import Logo from './components/Logo';
 
+import { logger } from "../shared/observability/logger";
 const App: React.FC = () => {
     const [currentView, setCurrentView] = useState('dashboard');
     const [isMobile, setIsMobile] = useState(false);

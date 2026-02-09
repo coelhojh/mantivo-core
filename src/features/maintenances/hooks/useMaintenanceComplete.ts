@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+import { logger } from "../../../shared/observability/logger";
   completeMaintenance,
   undoCompleteMaintenance,
 } from "../../../ai/services/storageService";
@@ -25,7 +26,7 @@ export function useMaintenanceComplete() {
       setIsCompletingId(id);
       await completeMaintenance(id, date, cost, attachments, provider);
     } catch (err) {
-      console.error("Erro ao concluir manutenção:", err);
+      logger.error("Erro ao concluir manutenção:", err);
       setError("Erro ao concluir manutenção");
       throw err;
     } finally {
@@ -39,7 +40,7 @@ export function useMaintenanceComplete() {
       setIsUndoingId(id);
       await undoCompleteMaintenance(id);
     } catch (err) {
-      console.error("Erro ao desfazer conclusão:", err);
+      logger.error("Erro ao desfazer conclusão:", err);
       setError("Erro ao desfazer conclusão");
       throw err;
     } finally {
@@ -55,3 +56,4 @@ export function useMaintenanceComplete() {
     error,
   };
 }
+18446744073709551614

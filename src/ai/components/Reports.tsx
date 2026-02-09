@@ -3,6 +3,7 @@ import { getMaintenances, getCondos } from '../services/storageService';
 import { Maintenance, Condo, MaintenanceStatus } from '../types';
 import { Filter, Calendar, FileText, Loader2, Printer, Building, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { format, isAfter, isBefore, endOfDay, isValid } from 'date-fns';
+import { logger } from "../../shared/observability/logger";
 
 const startOfDay = (d: Date) => {
   const newDate = new Date(d);
@@ -35,7 +36,7 @@ const Reports: React.FC = () => {
         const m = await getMaintenances();
         setCondos(c);
         setItems(m);
-      } catch(e) { console.error(e); }
+      } catch(e) { logger.error("Error", e); }
       setLoading(false);
     };
     load();
@@ -208,4 +209,4 @@ const Reports: React.FC = () => {
   );
 };
 
-export default Reports;
+export default Reports;18446744073709551614

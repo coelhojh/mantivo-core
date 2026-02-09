@@ -1,3 +1,4 @@
+import { logger } from "../../shared/observability/logger";
 
 import React, { useState, useEffect } from 'react';
 import { Provider, Category } from '../types';
@@ -34,7 +35,7 @@ const ProviderList: React.FC = () => {
         const [p, c] = await Promise.all([getProviders(), getCategories()]);
         setProviders(p);
         setCategories(c);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { logger.error("Error", e); } finally { setLoading(false); }
   };
 
   const handleOpenModal = (provider?: Provider) => {
@@ -355,3 +356,4 @@ const ProviderList: React.FC = () => {
 };
 
 export default ProviderList;
+18446744073709551615

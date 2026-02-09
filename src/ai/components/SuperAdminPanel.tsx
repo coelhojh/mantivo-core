@@ -1,3 +1,4 @@
+import { logger } from "../../shared/observability/logger";
 
 import React, { useState, useEffect } from 'react';
 import { getAllTenants, updateTenantPlan, getUser } from '../services/storageService';
@@ -19,7 +20,7 @@ const SuperAdminPanel: React.FC = () => {
     try {
         const data = await getAllTenants();
         setTenants(data);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { logger.error("Error", e); } finally { setLoading(false); }
   };
 
   const filteredTenants = tenants.filter(t => 
@@ -77,3 +78,4 @@ const SuperAdminPanel: React.FC = () => {
 };
 
 export default SuperAdminPanel;
+18446744073709551615

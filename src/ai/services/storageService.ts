@@ -1,3 +1,4 @@
+import { logger } from "../../shared/observability/logger";
 
 import { getSupabase } from './supabaseClient';
 import { User, Condo, Maintenance, MaintenanceStatus, FrequencyType, MaintenanceType, Category, PLAN_LIMITS, PlanType, NotificationPreferences, UserPermissions, MaintenanceAttachment, AttachmentType, Provider } from '../types';
@@ -14,7 +15,7 @@ const parseISO = (dateStr: string | undefined | null): Date => {
 };
 
 const handleError = (error: any, context: string) => {
-    console.error(`Error in ${context}:`, error);
+    logger.error("Error", `Error in ${context}:`, error);
     let msg = "Erro desconhecido";
     if (typeof error === 'string') msg = error;
     else if (error instanceof Error) msg = error.message;
@@ -396,3 +397,4 @@ export const register = async (userData: any): Promise<User | string> => {
   if (error) return error.message;
   return "Conta criada! Verifique seu email.";
 };
+18446744073709551615

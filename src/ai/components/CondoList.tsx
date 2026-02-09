@@ -1,3 +1,4 @@
+import { logger } from "../../shared/observability/logger";
 
 import React, { useState, useEffect } from 'react';
 import { Condo } from '../types';
@@ -31,7 +32,7 @@ const CondoList: React.FC = () => {
         const data = await getCondos();
         setCondos(data);
     } catch (error) {
-        console.error(error);
+        logger.error("Error", error);
     } finally {
         setLoading(false);
     }
@@ -351,3 +352,4 @@ const CondoList: React.FC = () => {
 };
 
 export default CondoList;
+18446744073709551615

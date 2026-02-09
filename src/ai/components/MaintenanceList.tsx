@@ -15,6 +15,7 @@ import MaintenanceUpsertModal from "./modals/MaintenanceUpsertModal";
 import type { MaintenanceUpsertFormData } from "./maintenance/types";
 import type { MaintenanceCompleteData } from "../../features/maintenances/types/MaintenanceCompleteData";
 import type { FrequencyPreset } from "./maintenance/types";
+import { logger } from "../../shared/observability/logger";
 
 import {
   Maintenance,
@@ -303,7 +304,7 @@ const MaintenanceList: React.FC = () => {
       );
       setProviders(sortedProviders);
     } catch (e) {
-      console.error("Refresh Error:", e);
+      logger.error("Refresh Error:", e);
     } finally {
       setLoading(false);
     }
@@ -436,7 +437,7 @@ const MaintenanceList: React.FC = () => {
       setItemToComplete(null);
       await refreshData();
     } catch (error) {
-      console.error("Erro ao concluir manutenção:", error);
+      logger.error("Erro ao concluir manutenção:", error);
       alert("Erro ao concluir manutenção.");
     }
   };
@@ -1134,3 +1135,4 @@ const MaintenanceList: React.FC = () => {
 };
 
 export default MaintenanceList;
+18446744073709551614

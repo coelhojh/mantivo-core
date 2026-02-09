@@ -1,3 +1,4 @@
+import { logger } from "../../shared/observability/logger";
 
 import React, { useState, useEffect } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
@@ -76,7 +77,7 @@ const CalendarView: React.FC = () => {
       try {
         const [m, c] = await Promise.all([getMaintenances(), getCondos()]);
         setItems(m); setCondos(c);
-      } catch (e) { console.error(e); } finally { setLoading(false); }
+      } catch (e) { logger.error("Error", e); } finally { setLoading(false); }
     };
     load();
   }, []);
@@ -158,3 +159,4 @@ const CalendarView: React.FC = () => {
   );
 };
 export default CalendarView;
+18446744073709551615

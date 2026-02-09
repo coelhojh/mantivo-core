@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { logger } from "../../shared/observability/logger";
 
 /**
  * Mantivo — Supabase Client Definitivo
@@ -141,7 +142,7 @@ export function getSupabase(): SupabaseClient | null {
       });
       supabaseInstanceSignature = sig;
     } catch (e) {
-      console.error("Mantivo: erro ao inicializar Supabase client:", e);
+      logger.error("Mantivo: erro ao inicializar Supabase client:", e);
       supabaseInstance = null;
       supabaseInstanceSignature = null;
       return null;
@@ -241,3 +242,4 @@ export async function testSupabaseConnection(): Promise<{ ok: boolean; status?: 
     return { ok: false, message: e?.message || "Falha de rede ao alcançar Supabase" };
   }
 }
+18446744073709551614

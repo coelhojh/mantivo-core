@@ -1,3 +1,4 @@
+import { logger } from "../../shared/observability/logger";
 
 import React, { useState } from 'react';
 import { Crown, Check, X, Loader2, Star, Zap, Building } from 'lucide-react';
@@ -22,7 +23,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, reason }) => {
         alert(`Plano ${plan.toUpperCase()} ativado com sucesso (Modo Demo)!`);
         onClose();
     } catch (e) {
-        console.error(e);
+        logger.error("Error", e);
         alert("Erro ao simular upgrade.");
     } finally {
         setLoading(null);
@@ -175,3 +176,4 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, reason }) => {
 };
 
 export default UpgradeModal;
+18446744073709551615

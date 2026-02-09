@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
 import { Maintenance, Condo } from '../types';
 import {
+import { logger } from "../../shared/observability/logger";
   BarChart,
   Bar,
   XAxis,
@@ -90,7 +91,7 @@ const Dashboard: React.FC = () => {
         setFiltered(data);
         setCondos(condosData);
       } catch (e) {
-        console.error('Dashboard load error', e);
+        logger.error('Dashboard load error', e);
       } finally {
         setLoading(false);
       }
@@ -349,3 +350,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+18446744073709551614

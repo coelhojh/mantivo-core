@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSidebarState } from '../shared/hooks/useSidebarState';
 import {
+import { logger } from "../shared/observability/logger";
   LayoutDashboard,
   Calendar,
   Wrench,
@@ -114,7 +115,7 @@ const App: React.FC = () => {
             }
           }
         } catch (e) {
-          console.error('Critical Auth Error:', e);
+          logger.error('Critical Auth Error:', e);
         } finally {
           clearTimeout(timeout);
           setAuthChecked(true);
@@ -187,7 +188,7 @@ const App: React.FC = () => {
           return <Dashboard />;
       }
     } catch (e) {
-      console.error('Render View Error:', e);
+      logger.error('Render View Error:', e);
       return (
         <div className="p-8">
           Erro ao carregar componente. Verifique o console.
@@ -431,3 +432,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+18446744073709551614

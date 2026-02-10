@@ -64,3 +64,9 @@ _incoming/
 # local backups
 *.bak
 *.bak2
+
+# Env
+.env
+.env.*
+!.env.example
+.env.db.local

@@ -56,7 +56,9 @@ export const generateEmailTemplate = (condoName: string, warnings: any[], overdu
                 if(item.nextExecutionDate) {
                     formattedDate = format(parseDate(item.nextExecutionDate), 'dd/MM/yyyy');
                 }
-            } catch(e) {}
+            } catch (e) {
+  logger.error("NotificationService silent catch", e);
+}
             return `
               <li style="${styles.li}">
                 <span style="${styles.overdueTag}">VENCIDA HÁ ${days} DIAS</span><br/>
@@ -79,7 +81,9 @@ export const generateEmailTemplate = (condoName: string, warnings: any[], overdu
                 if(item.nextExecutionDate) {
                     formattedDate = format(parseDate(item.nextExecutionDate), 'dd/MM/yyyy');
                 }
-            } catch(e) {}
+            } catch (e) {
+  logger.error("NotificationService silent catch", e);
+}
             return `
               <li style="${styles.li}">
                 <span style="${styles.warningTag}">VENCE EM ${days} DIAS</span><br/>

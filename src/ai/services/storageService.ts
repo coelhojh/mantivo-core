@@ -70,11 +70,11 @@ export const login = async (email: string, pass: string): Promise<User | null> =
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
     let userProfile = profile;
     if (!userProfile) {
-        const newProfile = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || 'Usuário', role: 'admin', plan: 'free', account_id: data.user.id };
+        const newProfile = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || 'Usuário', role: 'admin', plan: 'free' };
         await supabase.from('profiles').upsert([newProfile]);
         userProfile = newProfile;
     }
-    const user: User = { id: userProfile.id, name: userProfile.name, email: userProfile.email, companyName: userProfile.company_name || 'Minha Empresa', role: userProfile.role, plan: userProfile.plan || 'free', accountId: userProfile.account_id, preferences: userProfile.preferences, permissions: userProfile.permissions || { canEdit: true, canDelete: true }, allowedCondos: userProfile.allowed_condos || [] };
+    const user: User = { id: userProfile.id, name: userProfile.name, email: userProfile.email, companyName: userProfile.company_name || 'Minha Empresa', role: userProfile.role, plan: userProfile.plan || 'free', activeTenantId: (userProfile as any).active_tenant_id || null, preferences: userProfile.preferences, permissions: userProfile.permissions || { canEdit: true, canDelete: true }, allowedCondos: userProfile.allowed_condos || [] };
     localStorage.setItem('cg_user_cache', JSON.stringify(user));
     return user;
   }
@@ -93,6 +93,51 @@ export const getUser = (): User | null => {
     return cache ? JSON.parse(cache) : null;
   } catch { return null; }
 };
+
+
+export const refreshUserProfile = async (): Promise<User | null> => {
+  const supabase = getSupabase();
+  const user = getUser();
+  if (!supabase || !user) return null;
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) handleError(error, 'refreshUserProfile');
+
+  const nextUser: User = {
+    ...user,
+    // mantém o cache consistente com o tenant ativo no DB
+    activeTenantId: (profile as any)?.active_tenant_id || null,
+    role: (profile as any)?.role ?? user.role,
+    plan: (profile as any)?.plan ?? user.plan,
+    preferences: (profile as any)?.preferences ?? user.preferences,
+    permissions: (profile as any)?.permissions ?? user.permissions,
+    allowedCondos: (profile as any)?.allowed_condos ?? user.allowedCondos,
+  };
+
+  localStorage.setItem('cg_user_cache', JSON.stringify(nextUser));
+  return nextUser;
+};
+
+export const setActiveTenant = async (tenantId: string): Promise<void> => {
+  const supabase = getSupabase();
+  const user = getUser();
+  if (!supabase || !user) return;
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ active_tenant_id: tenantId })
+    .eq('id', user.id);
+
+  if (error) handleError(error, 'setActiveTenant');
+
+  await refreshUserProfile();
+};
+
 
 export const updateUserPreferences = async (prefs: NotificationPreferences): Promise<void> => {
   const user = getUser();
@@ -117,7 +162,7 @@ export const getProviders = async (): Promise<Provider[]> => {
     const { data, error } = await supabase.from('providers').select('*');
     if (error) return [];
     return (data || []).map((p: any) => ({
-        id: p.id, ownerId: p.owner_id, name: p.name, cnpj: p.cnpj, categories: p.categories || [],
+        id: p.id, name: p.name, cnpj: p.cnpj, categories: p.categories || [],
         contactName: p.contact_name, phone: p.phone, whatsapp: p.whatsapp, email: p.email, notes: p.notes
     }));
 };
@@ -127,7 +172,7 @@ export const saveProvider = async (p: Partial<Provider>) => {
     const supabase = getSupabase();
     if (!user || !supabase) return;
     // Fix: Changed p.contact_name to p.contactName as per the Provider type definition
-    const payload = { owner_id: user.id, name: p.name, cnpj: p.cnpj, categories: p.categories || [], contact_name: p.contactName, phone: p.phone, whatsapp: p.whatsapp, email: p.email, notes: p.notes };
+    const payload = { name: p.name, cnpj: p.cnpj, categories: p.categories || [], contact_name: p.contactName, phone: p.phone, whatsapp: p.whatsapp, email: p.email, notes: p.notes };
     const { error } = await supabase.from('providers').insert([payload]);
     if (error) handleError(error, 'saveProvider');
 };
@@ -152,9 +197,8 @@ export const getTeamMembers = async (): Promise<User[]> => {
     const supabase = getSupabase();
     if (!user || !supabase) return [];
     const query = supabase.from('profiles').select('*');
-    if (user.role !== 'super_admin') query.eq('account_id', user.accountId);
-    const { data } = await query;
-    return (data || []).map((p: any) => ({ id: p.id, name: p.name, email: p.email, companyName: p.company_name, role: p.role, plan: p.plan, accountId: p.account_id, preferences: p.preferences, permissions: p.permissions, allowedCondos: p.allowed_condos }));
+const { data } = await query;
+    return (data || []).map((p: any) => ({ id: p.id, name: p.name, email: p.email, companyName: p.company_name, role: p.role, plan: p.plan, preferences: p.preferences, permissions: p.permissions, allowedCondos: p.allowed_condos }));
 };
 
 export const inviteTeamMember = async (email: string, name: string): Promise<{ success: boolean; message: string }> => {
@@ -168,14 +212,14 @@ export const getCategories = async (): Promise<Category[]> => {
     const supabase = getSupabase();
     if (!supabase) return [];
     const { data } = await supabase.from('categories').select('*').order('name', { ascending: true });
-    return (data || []).map((c: any) => ({ id: c.id, name: c.name, isSystem: c.is_system, ownerId: c.owner_id }));
+    return (data || []).map((c: any) => ({ id: c.id, name: c.name, isSystem: c.is_system }));
 };
 
 export const saveCategory = async (name: string) => {
     const user = getUser();
     const supabase = getSupabase();
     if (!user || !supabase) return;
-    const { error } = await supabase.from('categories').insert([{ name, owner_id: user.id, is_system: false }]);
+    const { error } = await supabase.from('categories').insert([{ name, is_system: false }]);
     if (error) handleError(error, 'saveCategory');
 };
 
@@ -191,7 +235,7 @@ export const getCondos = async (): Promise<Condo[]> => {
     const supabase = getSupabase();
     if (!user || !supabase) return [];
     const { data } = await supabase.from('condos').select('*');
-    const all = (data || []).map((c: any) => ({ id: c.id, ownerId: c.owner_id, name: c.name, cnpj: c.cnpj, address: c.address, contactPhone: c.contact_phone, managerEmail: c.manager_email, additionalEmails: c.additional_emails, cep: c.cep, street: c.street, number: c.number, complement: c.complement, district: c.district, city: c.city, state: c.state }));
+    const all = (data || []).map((c: any) => ({ id: c.id, name: c.name, cnpj: c.cnpj, address: c.address, contactPhone: c.contact_phone, managerEmail: c.manager_email, additionalEmails: c.additional_emails, cep: c.cep, street: c.street, number: c.number, complement: c.complement, district: c.district, city: c.city, state: c.state }));
     if (user.role === 'guest') return all.filter(c => user.allowedCondos?.includes(c.id));
     return all;
 };
@@ -200,7 +244,7 @@ export const saveCondo = async (c: Partial<Condo>) => {
     const user = getUser();
     const supabase = getSupabase();
     if (!user || !supabase) return;
-    const payload = { owner_id: user.id, name: c.name, cnpj: c.cnpj, address: c.address, contact_phone: c.contactPhone, manager_email: c.managerEmail, additional_emails: c.additionalEmails, cep: c.cep, street: c.street, number: c.number, complement: c.complement, district: c.district, city: c.city, state: c.state };
+    const payload = { name: c.name, cnpj: c.cnpj, address: c.address, contact_phone: c.contactPhone, manager_email: c.managerEmail, additional_emails: c.additionalEmails, cep: c.cep, street: c.street, number: c.number, complement: c.complement, district: c.district, city: c.city, state: c.state };
     const { error } = await supabase.from('condos').insert([payload]);
     if (error) handleError(error, 'saveCondo');
 };
@@ -242,7 +286,7 @@ export const saveMaintenance = async (m: Partial<Maintenance>) => {
     if (!user || !supabase) throw new Error("Não logado.");
     // Fix: Using camelCase property names for Partial<Maintenance> object access
     const payload = {
-        owner_id: user.id, condo_id: m.condoId, category: m.category, maintenance_type: m.type, title: m.title, description: m.description || "",
+        condo_id: m.condoId, category: m.category, maintenance_type: m.type, title: m.title, description: m.description || "",
         provider_id: m.providerId || null, provider_name: m.providerName || "", provider_contact: m.providerContact || "", provider_email: m.providerEmail || "",
         provider_phone: m.providerPhone || "", cost: m.cost || 0, estimated_cost: m.estimatedCost || 0, frequency_type: m.frequencyType, 
         frequency_days: m.frequencyDays || 0, next_execution_date: m.nextExecutionDate, status: m.status, attachments: m.attachments || []
@@ -306,7 +350,7 @@ export const completeMaintenance = async (id: string, date: string, cost: number
         
         const nextPayload = {
             generated_from_id: id, // ✅ vínculo com o registro “pai”
-            owner_id: item.owner_id,
+            
             condo_id: item.condo_id,
             category: item.category,
             maintenance_type: item.maintenance_type,

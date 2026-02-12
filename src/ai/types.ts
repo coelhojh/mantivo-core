@@ -55,7 +55,7 @@ export interface User {
   companyName: string;
   role: 'admin' | 'guest' | 'super_admin'; 
   plan: PlanType;
-  accountId: string;
+  activeTenantId?: string | null;
   preferences?: NotificationPreferences;
   permissions?: UserPermissions;
   allowedCondos?: string[];
@@ -65,12 +65,10 @@ export interface Category {
   id: string;
   name: string;
   isSystem: boolean;
-  ownerId?: string;
 }
 
 export interface Condo {
   id: string;
-  ownerId: string;
   name: string;
   cnpj?: string;
   address: string; // Endereço completo (concatenado)
@@ -88,7 +86,6 @@ export interface Condo {
 
 export interface Provider {
   id: string;
-  ownerId: string;
   name: string;
   cnpj?: string;
   categories: string[];

@@ -102,7 +102,7 @@ const App: React.FC = () => {
                 companyName: isSuperAdmin ? 'MANTIVO ADMIN' : profile.company_name,
                 role: isSuperAdmin ? 'super_admin' : profile.role,
                 plan: isSuperAdmin ? 'enterprise' : (profile.plan as PlanType),
-                accountId: profile.account_id,
+                  activeTenantId: (profile as any).active_tenant_id || null,
                 preferences: profile.preferences,
                 permissions: isSuperAdmin
                   ? { canEdit: true, canDelete: true }

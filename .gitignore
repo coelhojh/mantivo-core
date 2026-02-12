@@ -70,3 +70,5 @@ _incoming/
 .env.*
 !.env.example
 .env.db.local
+.vercel
+.env*.local

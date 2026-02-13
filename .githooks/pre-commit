@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔒 pre-commit: security scan"
+
+# arquivos staged (ignora o próprio hook para evitar bootstrap self-block)
+STAGED=$(git diff --cached --name-only | grep -v '^\.githooks/pre-commit$' || true)
+
+# 1) bloquear .env e similares
+if echo "$STAGED" | grep -E '(^|/)\.env(\.|$)|(^|/)\.env\.local$|(^|/)\.env\.vercel$' >/dev/null; then
+  echo "❌ Bloqueado: arquivo .env staged para commit."
+  echo "   Remova do stage: git restore --staged <arquivo>"
+  exit 1
+fi
+
+# 2) bloquear pastas/arquivos do Vercel
+if echo "$STAGED" | grep -E '(^|/)\.vercel(/|$)' >/dev/null; then
+  echo "❌ Bloqueado: pasta .vercel no commit."
+  exit 1
+fi
+
+# 3) bloquear padrões de chaves/token (heurística) APENAS nos arquivos staged (menos o próprio hook)
+CONTENT=""
+if [ -n "$STAGED" ]; then
+  CONTENT=$(git diff --cached -U0 -- $STAGED | sed -n 's/^+//p' || true)
+fi
+
+# anon key JWT do Supabase costuma começar com eyJhbGciOi
+if echo "$CONTENT" | grep -E 'eyJhbGciOi' >/dev/null; then
+  echo "❌ Bloqueado: parece haver uma chave JWT (ex: Supabase ANON) no diff."
+  exit 1
+fi
+
+# service role key costuma ser semelhante (JWT) e/ou variável nomeada
+if echo "$CONTENT" | grep -E 'SERVICE_ROLE|SUPABASE_SERVICE_ROLE|service_role' >/dev/null; then
+  echo "❌ Bloqueado: referência a SERVICE_ROLE no diff."
+  exit 1
+fi
+
+echo "✅ pre-commit ok"

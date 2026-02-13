@@ -59,9 +59,11 @@ const App: React.FC = () => {
       } catch {}
     };
 
-    const onTenantChanged = () => sync();
+    const onTenantChanged = () => { void Promise.resolve(sync()); };
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "tenant_version") sync();
+      if (e.key === "tenant_version") {
+        void Promise.resolve(sync());
+      }
     };
 
     window.addEventListener("mantivo:tenant-changed", onTenantChanged);
@@ -100,11 +102,13 @@ const App: React.FC = () => {
 
         const supabase = getSupabase();
 
-        // DEBUG (temporário): diagnóstico da config do Supabase no Preview
-        try {
-          const mod = await import("./services/supabaseClient");
-          const cfg = mod.getActiveConfig?.();
-        } catch {}
+          // DEBUG (temporário): diagnóstico da config do Supabase no Preview
+          import("./services/supabaseClient")
+            .then((mod) => {
+              const cfg = (mod as any).getActiveConfig?.();
+              void cfg;
+            })
+            .catch(() => {});
 
         if (!supabase) {
           clearTimeout(timeout);

@@ -411,10 +411,13 @@ export const checkPlanLimits = async (type: string): Promise<boolean> => {
 };
 
 export const getAllTenants = async () => {
-    const supabase = getSupabase();
-    if (!supabase) return [];
-    const { data } = await supabase.from('profiles').select('*').neq('role', 'guest');
-    return data || [];
+  const supabase = getSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase.rpc("list_tenants_for_superadmin");
+  if (error) handleError(error, "getAllTenants_rpc");
+
+  return data || [];
 };
 
 export const updateTenantPlan = async (userId: string, newPlan: string) => {
@@ -439,4 +442,3 @@ export const register = async (userData: any): Promise<User | string> => {
   if (error) return error.message;
   return "Conta criada! Verifique seu email.";
 };
-18446744073709551615

@@ -4,6 +4,7 @@ import { ShieldAlert, Users, DollarSign, Search, Edit2, Check, X, Loader2, Trend
 import { PLAN_LIMITS } from '../types';
 import { format } from 'date-fns';
 import { logger } from "../../shared/observability/logger";
+import SuperadminTenantSwitcher from "./superadmin/SuperadminTenantSwitcher";
 const SuperAdminPanel: React.FC = () => {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,11 @@ const SuperAdminPanel: React.FC = () => {
             Painel Administrativo Master
           </h2>
           <p className="text-sm text-slate-500">Gestão global da plataforma, clientes e métricas financeiras.</p>
+
+        {/* Mantivo — Superadmin Tenant Switcher */}
+        <div className="mt-4">
+          <SuperadminTenantSwitcher />
+        </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

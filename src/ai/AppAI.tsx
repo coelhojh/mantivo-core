@@ -15,9 +15,8 @@ import {
   ShieldAlert,
   Truck,
   Settings as SettingsIcon,
-    ChevronLeft,
-    ChevronRight,
-
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { User, PlanType } from './types';
 import { getUser, logout } from './services/storageService';
@@ -37,89 +36,120 @@ import SuperAdminPanel from './components/SuperAdminPanel';
 import Logo from './components/Logo';
 
 import { logger } from "../shared/observability/logger";
+
 const App: React.FC = () => {
-    const [currentView, setCurrentView] = useState('dashboard');
-    const [isMobile, setIsMobile] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
-    const [authChecked, setAuthChecked] = useState(false);
-    const [showSetup, setShowSetup] = useState(false);
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [isMobile, setIsMobile] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
 
-    // Desktop: colapsado/expandido (persistido por usuário)
-    const {
-      collapsed: sidebarCollapsed,
-      setCollapsed: setSidebarCollapsed,
-      toggle: toggleSidebarCollapsed,
-    } = useSidebarState(user?.id ?? null);
+    const [tenantVersion, setTenantVersion] = useState<number>(() => {
+    return Number(localStorage.getItem("tenant_version") || "0");
+  });
 
-    // Mobile: drawer aberto/fechado
-    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  useEffect(() => {
+    const sync = () => {
+      const v = Number(localStorage.getItem("tenant_version") || "0");
+      setTenantVersion(v);
 
-    useEffect(() => {
-      if (window.location.search.includes('setup=true')) {
-        setShowSetup(true);
-      }
+      try {
+        const cached = JSON.parse(localStorage.getItem("cg_user_cache") || "null");
+        if (cached?.id) setUser(cached);
+      } catch {}
+    };
+
+    const onTenantChanged = () => sync();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "tenant_version") sync();
+    };
+
+    window.addEventListener("mantivo:tenant-changed", onTenantChanged);
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      window.removeEventListener("mantivo:tenant-changed", onTenantChanged);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
 
-      const initAuth = async () => {
-        const timeout = setTimeout(() => {
-          if (!authChecked) setAuthChecked(true);
-        }, 5000);
+  // Desktop: colapsado/expandido (persistido por usuário)
+  const {
+    collapsed: sidebarCollapsed,
+    setCollapsed: setSidebarCollapsed,
+    toggle: toggleSidebarCollapsed,
+  } = useSidebarState(user?.id ?? null);
 
+  // Mobile: drawer aberto/fechado
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (window.location.search.includes('setup=true')) {
+      setShowSetup(true);
+    }
+
+    const initAuth = async () => {
+      const timeout = setTimeout(() => {
+        if (!authChecked) setAuthChecked(true);
+      }, 5000);
+
+      try {
+        const cached = getUser();
+        if (cached) setUser(cached);
+
+        const supabase = getSupabase();
+
+        // DEBUG (temporário): diagnóstico da config do Supabase no Preview
         try {
-          const cached = getUser();
-          if (cached) setUser(cached);
+          const mod = await import("./services/supabaseClient");
+          const cfg = mod.getActiveConfig?.();
+        } catch {}
 
-          const supabase = getSupabase();
-  // DEBUG (temporário): diagnóstico da config do Supabase no Preview
-  try {
-    const mod = await import("./services/supabaseClient");
-    const cfg = mod.getActiveConfig?.();
-  } catch {}
-
-          if (!supabase) {
-            clearTimeout(timeout);
-            setAuthChecked(true);
-            return;
-          }
-
-          const { data, error: sessionError } = await supabase.auth.getSession();
-
-          if (!sessionError && data?.session) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.session.user.id)
-              .single();
-
-            if (profile) {
-              const isSuperAdmin =
-                cached?.role === 'super_admin' || profile.role === 'super_admin';
-
-              const userData: User = {
-                id: profile.id,
-                name: profile.name,
-                email: profile.email,
-                companyName: isSuperAdmin ? 'MANTIVO ADMIN' : profile.company_name,
-                role: isSuperAdmin ? 'super_admin' : profile.role,
-                plan: isSuperAdmin ? 'enterprise' : (profile.plan as PlanType),
-                  activeTenantId: (profile as any).active_tenant_id || null,
-                preferences: profile.preferences,
-                permissions: isSuperAdmin
-                  ? { canEdit: true, canDelete: true }
-                  : profile.permissions || { canEdit: false, canDelete: false },
-                allowedCondos: profile.allowed_condos || [],
-              };
-
-              localStorage.setItem('cg_user_cache', JSON.stringify(userData));
-              setUser(userData);
-            }
-          }
-        } catch (e) {
-          logger.error('Critical Auth Error:', e);
-        } finally {
+        if (!supabase) {
           clearTimeout(timeout);
           setAuthChecked(true);
+          return;
         }
+
+        const { data, error: sessionError } = await supabase.auth.getSession();
+
+        if (!sessionError && data?.session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.session.user.id)
+            .single();
+
+          if (profile) {
+            const isSuperAdmin =
+              cached?.role === 'super_admin' || profile.role === 'super_admin';
+
+            const userData: User = {
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              companyName: isSuperAdmin ? 'MANTIVO ADMIN' : profile.company_name,
+              role: isSuperAdmin ? 'super_admin' : profile.role,
+              plan: isSuperAdmin ? 'enterprise' : (profile.plan as PlanType),
+              activeTenantId: (profile as any).active_tenant_id || null,
+              preferences: profile.preferences,
+              permissions: isSuperAdmin
+                ? { canEdit: true, canDelete: true }
+                : profile.permissions || { canEdit: false, canDelete: false },
+              allowedCondos: profile.allowed_condos || [],
+            };
+
+            localStorage.setItem('cg_user_cache', JSON.stringify(userData));
+            setUser(userData);
+          }
+        }
+      } catch (e) {
+        logger.error('Critical Auth Error:', e);
+      } finally {
+        clearTimeout(timeout);
+        setAuthChecked(true);
+      }
     };
 
     initAuth();
@@ -240,14 +270,14 @@ const App: React.FC = () => {
       <aside
         className={`fixed lg:static inset-y-0 left-0 z-50 bg-slate-950 text-white transition-[width,transform] duration-300 flex flex-col print:hidden
         ${
-            isMobile
-              ? mobileSidebarOpen
-                ? 'translate-x-0 w-72 shadow-2xl shadow-black/30'
-                : '-translate-x-full w-72'
-              : sidebarCollapsed
-              ? 'w-20 translate-x-0'
-              : 'w-72 translate-x-0'
-          }`}
+          isMobile
+            ? mobileSidebarOpen
+              ? 'translate-x-0 w-72 shadow-2xl shadow-black/30'
+              : '-translate-x-full w-72'
+            : sidebarCollapsed
+            ? 'w-20 translate-x-0'
+            : 'w-72 translate-x-0'
+        }`}
       >
         <div className="px-6 py-5 flex items-center justify-between h-20 shrink-0 border-b border-white/5">
           <div
@@ -280,8 +310,6 @@ const App: React.FC = () => {
               {sidebarCollapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
             </button>
           )}
-
-
 
           {isMobile && (
             <button
@@ -318,10 +346,10 @@ const App: React.FC = () => {
                 />
                 <span
                   className={`font-semibold text-sm tracking-tight overflow-hidden whitespace-nowrap transition-[opacity,max-width] duration-200 ${
-                      isMobile || !sidebarCollapsed
-                        ? 'opacity-100 max-w-[220px]'
-                        : 'opacity-0 max-w-0 pointer-events-none'
-                    }`}
+                    isMobile || !sidebarCollapsed
+                      ? 'opacity-100 max-w-[220px]'
+                      : 'opacity-0 max-w-0 pointer-events-none'
+                  }`}
                 >
                   {item.label}
                 </span>
@@ -405,6 +433,12 @@ const App: React.FC = () => {
                   ? 'Painel Master'
                   : navItems.find((n) => n.id === currentView)?.label}
               </h1>
+
+              {/* DEBUG tenant (temporário) */}
+              <div className="text-[10px] text-slate-400 mt-1 select-all">
+                tenant: {user?.activeTenantId || "null"}
+              </div>
+
               <p className="text-xs font-medium text-[rgb(var(--muted))] tracking-wide">
                 Visão geral operacional
               </p>
@@ -422,7 +456,9 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto p-5 lg:p-8 print:overflow-visible print:h-auto">
           <div className="max-w-[1600px] mx-auto">
             <div className="rounded-[var(--radius)] bg-[rgb(var(--surface))] border border-[rgb(var(--border))] shadow-[var(--shadow)]">
-              <div className="p-5 lg:p-7">{renderView()}</div>
+              <div className="p-5 lg:p-7" key={"tenant-" + tenantVersion}>
+  {renderView()}
+</div>
             </div>
           </div>
         </div>
@@ -432,4 +468,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-18446744073709551614

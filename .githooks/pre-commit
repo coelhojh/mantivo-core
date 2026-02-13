@@ -31,6 +31,12 @@ if echo "$CONTENT" | grep -E 'eyJhbGciOi' >/dev/null; then
   exit 1
 fi
 
+# Authorization header com JWT literal (ex: "Bearer eyJ...")
+if echo "$CONTENT" | grep -E 'Authorization:\s*Bearer\s+eyJhbGciOi' >/dev/null; then
+  echo "❌ Bloqueado: Authorization Bearer com JWT literal no diff."
+  exit 1
+fi
+
 # service role key costuma ser semelhante (JWT) e/ou variável nomeada
 if echo "$CONTENT" | grep -E 'SERVICE_ROLE|SUPABASE_SERVICE_ROLE|service_role' >/dev/null; then
   echo "❌ Bloqueado: referência a SERVICE_ROLE no diff."

@@ -72,3 +72,5 @@ _incoming/
 .env.db.local
 .vercel
 .env*.local
+
+.env.local

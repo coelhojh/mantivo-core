@@ -10,7 +10,9 @@ if (!url || !key) throw new Error("Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANO
 
 const email = process.env.BOOTSTRAP_B_EMAIL || "coelhojh+mantivo-b@gmail.com";
 const password = process.env.BOOTSTRAP_B_PASS || "Mantivo#123456";
-const tenantName = process.env.BOOTSTRAP_B_TENANT || "Tenant USER_B (test)";
+const tenantNameBase = process.env.BOOTSTRAP_B_TENANT || "Tenant USER_B (test)";
+const uniq = new Date().toISOString().replace(/[-:.TZ]/g,"").slice(0,14);
+const tenantName = `${tenantNameBase} ${uniq}`;
 
 const supabase = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -28,10 +30,8 @@ if (signInErr) {
 console.log("== Create tenant for USER_B ==");
 // IMPORTANTE: use o MESMO client logado (token vai junto)
 const { data: tenantRow, error: tenantErr } = await supabase
-  .from("tenants")
-  .insert({ name: tenantName, created_by: signInData.user.id })
-  .select("id,name,created_by")
-  .single();
+    .rpc("create_tenant", { p_name: tenantName })
+    .single();
 
 if (tenantErr) {
   console.error("Tenant insert failed:", tenantErr.message);

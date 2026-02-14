@@ -29,6 +29,7 @@ import { differenceInDays, format, isValid } from 'date-fns';
 import UpgradeModal from './UpgradeModal';
 
 import { logger } from "../../shared/observability/logger";
+import { useTenant } from "../tenant/TenantContext";
 /* ============================================================================
    Helpers
 ============================================================================ */
@@ -68,6 +69,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 ============================================================================ */
 
 const Dashboard: React.FC = () => {
+  const { tenantEpoch } = useTenant();
   const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [filtered, setFiltered] = useState<Maintenance[]>([]);
   const [condos, setCondos] = useState<Condo[]>([]);
@@ -96,7 +98,7 @@ const Dashboard: React.FC = () => {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [tenantEpoch]);
 
   /* ------------------------------------------------------------------------ */
   /* Filters */

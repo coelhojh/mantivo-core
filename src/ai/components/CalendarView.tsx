@@ -41,15 +41,26 @@ const parseISO = (dateStr: string | undefined | null): Date => {
 };
 
 const getStatusColor = (item: Maintenance) => {
+  // ✅ concluídas
   if (item.status === MaintenanceStatus.COMPLETED) {
-    return 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100';
+    return "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100";
   }
+
+  // ⚠️ itens com vencimento
   if (item.nextExecutionDate) {
     const diff = differenceInDays(parseISO(item.nextExecutionDate), new Date());
-    if (diff < 0) return 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100';
-    return 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100';
+
+    // 🔴 vencidas
+    if (diff < 0) {
+      return "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100";
+    }
+
+    // 🟡 em dia / a vencer
+    return "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100";
   }
-  return 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
+
+  // neutro
+  return "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100";
 };
 
 const MaintenanceCard: React.FC<{ item: Maintenance; condoName: string; onClick?: (e: any) => void }> = ({ item, condoName, onClick }) => (

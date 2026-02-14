@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
-import { Maintenance, MaintenanceStatus, Condo } from '../types';
-import { format, eachDayOfInterval, isSameMonth, isSameDay, addMonths, isValid, differenceInDays } from 'date-fns';
+import { Maintenance, Condo } from '../types';
+import { format, eachDayOfInterval, isSameMonth, isSameDay, addMonths, isValid } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Tag, Loader2, Printer, Building, Clock, Wrench } from 'lucide-react';
 import { logger } from "../../shared/observability/logger";
+import { getMaintenanceStatusColor } from "../theme/maintenanceTheme";
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const endOfMonth = (d: Date) => {
     const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
@@ -40,31 +41,9 @@ const parseISO = (dateStr: string | undefined | null): Date => {
   return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 };
 
-const getStatusColor = (item: Maintenance) => {
-  // ✅ concluídas
-  if (item.status === MaintenanceStatus.COMPLETED) {
-    return "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100";
-  }
-
-  // ⚠️ itens com vencimento
-  if (item.nextExecutionDate) {
-    const diff = differenceInDays(parseISO(item.nextExecutionDate), new Date());
-
-    // 🔴 vencidas
-    if (diff < 0) {
-      return "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100";
-    }
-
-    // 🟡 em dia / a vencer
-    return "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100";
-  }
-
-  // neutro
-  return "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100";
-};
 
 const MaintenanceCard: React.FC<{ item: Maintenance; condoName: string; onClick?: (e: any) => void }> = ({ item, condoName, onClick }) => (
-  <div onClick={onClick} className={`px-1.5 py-1 rounded border cursor-pointer transition shadow-sm hover:opacity-80 ${getStatusColor(item)}`}>
+  <div onClick={onClick} className={`px-1.5 py-1 rounded border cursor-pointer transition shadow-sm hover:opacity-80 ${getMaintenanceStatusColor(item)}`}>
       <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1 font-bold text-[10px] leading-tight overflow-hidden"><span className="truncate w-full">{condoName}</span></div>
           <div className="flex items-center gap-1 opacity-90 text-[9px] leading-tight overflow-hidden"><Tag size={8} className="shrink-0" /> <span className="truncate">{item.title}</span></div>

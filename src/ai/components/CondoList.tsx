@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Condo } from '../types';
 import { getCondos, saveCondo, updateCondo, deleteCondo, checkPlanLimits, getUser } from '../services/storageService';
 import { Building, MapPin, Search, Edit2, Trash2, X, Loader2, AtSign, LayoutGrid, List, Info, Phone, Mail, Globe, MessageCircle } from 'lucide-react';
 import UpgradeModal from './UpgradeModal';
-
+import { logger } from "../../shared/observability/logger";
 const CondoList: React.FC = () => {
   const [condos, setCondos] = useState<Condo[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -31,7 +30,7 @@ const CondoList: React.FC = () => {
         const data = await getCondos();
         setCondos(data);
     } catch (error) {
-        console.error(error);
+        logger.error("Error", error);
     } finally {
         setLoading(false);
     }
@@ -351,3 +350,4 @@ const CondoList: React.FC = () => {
 };
 
 export default CondoList;
+18446744073709551615

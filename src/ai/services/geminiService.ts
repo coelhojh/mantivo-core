@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-
+import { logger } from "../../shared/observability/logger";
 // Generates a building maintenance plan based on specific condo details using Gemini API
 export const generateMaintenancePlan = async (condoType: string, facilities: string): Promise<string> => {
   try {
@@ -53,7 +53,7 @@ export const generateMaintenancePlan = async (condoType: string, facilities: str
     // Access the text property directly from the response object as per updated @google/genai guidelines
     return response.text || "[]";
   } catch (error) {
-    console.error("Gemini Error:", error);
+    logger.error("Gemini Error:", error);
     // Return standard fallback items for demo purposes if the API fails
     return `[
       {
@@ -64,4 +64,4 @@ export const generateMaintenancePlan = async (condoType: string, facilities: str
       }
     ]`;
   }
-};
+};18446744073709551614

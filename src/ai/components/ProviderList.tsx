@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Provider, Category } from '../types';
 import { getProviders, saveProvider, updateProvider, deleteProvider, getCategories, getUser } from '../services/storageService';
@@ -6,6 +5,7 @@ import {
   Plus, Search, Edit2, Trash2, X, Loader2, LayoutGrid, List, AtSign, MessageCircle, Truck, Phone, User, Info, Briefcase, Filter, AlignLeft, Mail
 } from 'lucide-react';
 
+import { logger } from "../../shared/observability/logger";
 const ProviderList: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -34,7 +34,7 @@ const ProviderList: React.FC = () => {
         const [p, c] = await Promise.all([getProviders(), getCategories()]);
         setProviders(p);
         setCategories(c);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { logger.error("Unexpected error", e); } finally { setLoading(false); }
   };
 
   const handleOpenModal = (provider?: Provider) => {
@@ -355,3 +355,4 @@ const ProviderList: React.FC = () => {
 };
 
 export default ProviderList;
+18446744073709551615

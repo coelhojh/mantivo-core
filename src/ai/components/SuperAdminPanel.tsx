@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { getAllTenants, updateTenantPlan, getUser } from '../services/storageService';
 import { ShieldAlert, Users, DollarSign, Search, Edit2, Check, X, Loader2, TrendingUp, Building } from 'lucide-react';
 import { PLAN_LIMITS } from '../types';
 import { format } from 'date-fns';
-
+import { logger } from "../../shared/observability/logger";
+import SuperadminTenantSwitcher from "./superadmin/SuperadminTenantSwitcher";
 const SuperAdminPanel: React.FC = () => {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +19,7 @@ const SuperAdminPanel: React.FC = () => {
     try {
         const data = await getAllTenants();
         setTenants(data);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { logger.error("Unexpected error", e); } finally { setLoading(false); }
   };
 
   const filteredTenants = tenants.filter(t => 
@@ -39,6 +39,11 @@ const SuperAdminPanel: React.FC = () => {
             Painel Administrativo Master
           </h2>
           <p className="text-sm text-slate-500">Gestão global da plataforma, clientes e métricas financeiras.</p>
+
+        {/* Mantivo — Superadmin Tenant Switcher */}
+        <div className="mt-4">
+          <SuperadminTenantSwitcher />
+        </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -59,7 +64,11 @@ const SuperAdminPanel: React.FC = () => {
             </div>
             <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b border-slate-100 font-bold text-slate-400 text-[10px] uppercase">
-                    <tr> <th className="px-6 py-3">Cliente</th> <th className="px-6 py-3">Plano</th> <th className="px-6 py-3 text-right">Ações</th> </tr>
+                    <tr>
+  <th className="px-6 py-3">Cliente</th>
+  <th className="px-6 py-3">Plano</th>
+  <th className="px-6 py-3 text-right">Ações</th>
+</tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                     {filteredTenants.map(t => (
@@ -77,3 +86,4 @@ const SuperAdminPanel: React.FC = () => {
 };
 
 export default SuperAdminPanel;
+18446744073709551615

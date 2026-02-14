@@ -60,3 +60,17 @@ Thumbs.db
 # Incoming / Backup / Experimental
 # =========================
 _incoming/
+
+# local backups
+*.bak
+*.bak2
+
+# Env
+.env
+.env.*
+!.env.example
+.env.db.local
+.vercel
+.env*.local
+
+.env.local

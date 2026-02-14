@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
+import { logger } from "../../shared/observability/logger";
 /**
  * Mantivo — Supabase Client Definitivo
  *
@@ -16,8 +16,10 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 // =============================================================================
 // ENV (Vite)
 // =============================================================================
-const ENV_SUPABASE_URL: string = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
-const ENV_SUPABASE_ANON_KEY: string = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
+import { env } from "../../shared/env";
+
+const ENV_SUPABASE_URL: string = env.SUPABASE_URL;
+const ENV_SUPABASE_ANON_KEY: string = env.SUPABASE_ANON_KEY;
 
 // =============================================================================
 // LocalStorage keys (UI técnica do Mantivo)
@@ -141,7 +143,7 @@ export function getSupabase(): SupabaseClient | null {
       });
       supabaseInstanceSignature = sig;
     } catch (e) {
-      console.error("Mantivo: erro ao inicializar Supabase client:", e);
+      logger.error("Mantivo: erro ao inicializar Supabase client:", e);
       supabaseInstance = null;
       supabaseInstanceSignature = null;
       return null;
@@ -241,3 +243,4 @@ export async function testSupabaseConnection(): Promise<{ ok: boolean; status?: 
     return { ok: false, message: e?.message || "Falha de rede ao alcançar Supabase" };
   }
 }
+18446744073709551614

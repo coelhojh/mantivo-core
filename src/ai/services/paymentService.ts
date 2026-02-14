@@ -1,8 +1,7 @@
-
 import { getSupabase } from './supabaseClient';
 import { getUser } from './storageService';
 import { PlanType } from '../types';
-
+import { logger } from "../../shared/observability/logger";
 /**
  * SERVICE DE PAGAMENTOS (Integração PagBank via Supabase Edge Functions)
  */
@@ -45,7 +44,7 @@ export const initiatePagBankCheckout = async (plan: PlanType): Promise<void> => 
     });
 
     if (error) {
-        console.error("Erro na Edge Function:", error);
+        logger.error("Erro na Edge Function:", error);
         alert("Ocorreu um erro ao conectar com o processador de pagamentos. Entre em contato com o suporte.");
         return;
     }
@@ -54,12 +53,13 @@ export const initiatePagBankCheckout = async (plan: PlanType): Promise<void> => 
         window.location.href = data.redirect_url;
     } else {
         // Fallback apenas para demonstração - EM PRODUÇÃO ISSO DEVE SER REMOVIDO
-        console.warn("Ambiente de Demo: Redirecionamento não retornado.");
+        logger.warn("Ambiente de Demo: Redirecionamento não retornado.");
         alert("Simulação: O checkout do PagBank seria aberto agora. Após o pagamento, seu plano será atualizado via Webhook.");
     }
 
   } catch (err: any) {
-    console.error("Erro no checkout:", err);
+    logger.error("Erro no checkout:", err);
     alert("Erro ao processar pagamento: " + err.message);
   }
 };
+18446744073709551615

@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
-import { Maintenance, MaintenanceStatus, Condo } from '../types';
-import { format, eachDayOfInterval, isSameMonth, isSameDay, addMonths, isValid, differenceInDays } from 'date-fns';
+import { Maintenance, Condo } from '../types';
+import { format, eachDayOfInterval, isSameMonth, isSameDay, addMonths, isValid } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Tag, Loader2, Printer, Building, Clock, Wrench } from 'lucide-react';
-
+import { logger } from "../../shared/observability/logger";
+import { getMaintenanceStatusColor, getMantivoMaintenanceStatus } from "../theme/maintenanceTheme";
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const endOfMonth = (d: Date) => {
     const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
@@ -41,20 +41,9 @@ const parseISO = (dateStr: string | undefined | null): Date => {
   return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 };
 
-const getStatusColor = (item: Maintenance) => {
-  if (item.status === MaintenanceStatus.COMPLETED) {
-    return 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100';
-  }
-  if (item.nextExecutionDate) {
-    const diff = differenceInDays(parseISO(item.nextExecutionDate), new Date());
-    if (diff < 0) return 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100';
-    return 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100';
-  }
-  return 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
-};
 
 const MaintenanceCard: React.FC<{ item: Maintenance; condoName: string; onClick?: (e: any) => void }> = ({ item, condoName, onClick }) => (
-  <div onClick={onClick} className={`px-1.5 py-1 rounded border cursor-pointer transition shadow-sm hover:opacity-80 ${getStatusColor(item)}`}>
+  <div onClick={onClick} className={`relative pl-2 pr-1.5 py-1 rounded-xl border cursor-pointer transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-l-xl ${getMaintenanceStatusColor(item)}`}>
       <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1 font-bold text-[10px] leading-tight overflow-hidden"><span className="truncate w-full">{condoName}</span></div>
           <div className="flex items-center gap-1 opacity-90 text-[9px] leading-tight overflow-hidden"><Tag size={8} className="shrink-0" /> <span className="truncate">{item.title}</span></div>
@@ -76,7 +65,7 @@ const CalendarView: React.FC = () => {
       try {
         const [m, c] = await Promise.all([getMaintenances(), getCondos()]);
         setItems(m); setCondos(c);
-      } catch (e) { console.error(e); } finally { setLoading(false); }
+      } catch (e) { logger.error("Unexpected error", e); } finally { setLoading(false); }
     };
     load();
   }, []);
@@ -132,9 +121,43 @@ const CalendarView: React.FC = () => {
           const dayItems = getDayItems(day);
           const isToday = isSameDay(day, new Date());
           const isCurrentMonth = isSameMonth(day, currentDate);
+
+          const dayStatus = dayItems.reduce(
+            (acc, m) => {
+              const s = getMantivoMaintenanceStatus(m);
+              if (s === "overdue") acc.overdue++;
+              else if (s === "due") acc.due++;
+              else if (s === "done") acc.done++;
+              return acc;
+            },
+            { overdue: 0, due: 0, done: 0 }
+          );
           return (
-            <div key={day.toISOString()} className={`min-h-[100px] border-r border-b border-slate-100 p-1 flex flex-col gap-1 ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-blue-50/30' : ''}`}>
-              <div className={`text-[10px] font-bold p-1 rounded-md w-6 h-6 flex items-center justify-center ${isToday ? 'bg-blue-600 text-white shadow-sm' : isCurrentMonth ? 'text-slate-600' : 'text-slate-300'}`}>{format(day, 'd')}</div>
+            <div key={day.toISOString()} className={`min-h-[100px] border-r border-b border-slate-100 p-1 flex flex-col gap-1 ${!isCurrentMonth ? "bg-slate-50/50" : "bg-white"} ${isToday ? "ring-2 ring-[rgb(var(--primary)/0.25)] bg-[rgb(var(--primary)/0.06)] shadow-sm" : ""}`}>
+              <div className={`text-[10px] font-bold p-1 rounded-md w-6 h-6 flex items-center justify-center `}>{format(day, "d")}</div>
+              <div className="mt-1 flex items-center gap-1 px-1">
+                {dayStatus.overdue > 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full animate-pulse"
+                    style={{ background: "rgb(var(--danger))" }}
+                    title={`${dayStatus.overdue} vencida(s)`}
+                  />
+                ) : null}
+                {dayStatus.due > 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: "rgb(var(--warning))" }}
+                    title={`${dayStatus.due} em dia`}
+                  />
+                ) : null}
+                {dayStatus.done > 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: "rgb(var(--success))" }}
+                    title={`${dayStatus.done} concluída(s)`}
+                  />
+                ) : null}
+              </div>
               <div className="flex flex-col gap-1 overflow-y-auto max-h-[80px] scrollbar-none">{dayItems.map(item => (<MaintenanceCard key={item.id} item={item} condoName={getCondoName(item.condoId)} onClick={() => setSelectedItem(item)} />))}</div>
             </div>
           );
@@ -158,3 +181,4 @@ const CalendarView: React.FC = () => {
   );
 };
 export default CalendarView;
+18446744073709551615

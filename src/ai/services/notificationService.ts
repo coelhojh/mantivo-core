@@ -3,6 +3,7 @@ import { MaintenanceStatus } from '../types';
 import { format, differenceInCalendarDays, isValid } from 'date-fns';
 import { getSupabase } from './supabaseClient';
 
+import { logger } from "../../shared/observability/logger";
 const parseDate = (dateStr: string | undefined | null): Date => {
   if (!dateStr) return new Date(NaN);
   const parts = dateStr.split('-');
@@ -55,7 +56,9 @@ export const generateEmailTemplate = (condoName: string, warnings: any[], overdu
                 if(item.nextExecutionDate) {
                     formattedDate = format(parseDate(item.nextExecutionDate), 'dd/MM/yyyy');
                 }
-            } catch(e) {}
+            } catch (e) {
+  logger.error("NotificationService silent catch", e);
+}
             return `
               <li style="${styles.li}">
                 <span style="${styles.overdueTag}">VENCIDA HÁ ${days} DIAS</span><br/>
@@ -78,7 +81,9 @@ export const generateEmailTemplate = (condoName: string, warnings: any[], overdu
                 if(item.nextExecutionDate) {
                     formattedDate = format(parseDate(item.nextExecutionDate), 'dd/MM/yyyy');
                 }
-            } catch(e) {}
+            } catch (e) {
+  logger.error("NotificationService silent catch", e);
+}
             return `
               <li style="${styles.li}">
                 <span style="${styles.warningTag}">VENCE EM ${days} DIAS</span><br/>
@@ -192,7 +197,7 @@ export const checkAndSendNotifications = async (): Promise<string[]> => {
             sentLogs.push(`✅ E-mail enviado para ${condo.name}: ${warnings.length} avisos, ${overdues.length} vencidos.`);
         }
     } catch (err: any) {
-        console.warn(`Backend indisponível para envio de e-mail (${condo.name}):`, err.message);
+        logger.error("Notification backend unavailable", err, { condoId: condo.id, condoName: condo.name });
         
         // Se falhar (ex: função não implantada/CORS), loga como SIMULADO para não quebrar a UX
         if (err.message && (err.message.includes('Failed to send') || err.message.includes('Function not found'))) {

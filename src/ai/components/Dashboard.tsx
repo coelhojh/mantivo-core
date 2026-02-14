@@ -1,142 +1,344 @@
+import {
+  getStatus3,
+  STATUS3_LABEL,
+  STATUS3_COLOR_TOKEN,
+} from "../../shared/utils/maintenanceStatus";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { preload } from "../services/preload";
+import { getMaintenances, getCondos } from "../services/storageService";
+import { useTenantDataLoader } from "../tenant/useTenantDataLoader";
+import { Maintenance, Condo } from "../types";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as ReTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  Filter,
+  Building,
+  Loader2,
+  LayoutDashboard,
+  Calendar,
+} from "lucide-react";
+import { differenceInDays, format, isValid } from "date-fns";
+import UpgradeModal from "./UpgradeModal";
 
-import React, { useEffect, useState } from 'react';
-import { getMaintenances, getUser, getCondos } from '../services/storageService';
-import { checkAndSendNotifications } from '../services/notificationService';
-import { Maintenance, MaintenanceStatus, Condo } from '../types';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, PieChart, Pie, Cell 
-} from 'recharts';
-import { AlertCircle, CheckCircle, Clock, TrendingUp, Crown, Bell, Calendar, Filter, Building, Loader2, LayoutDashboard } from 'lucide-react';
-import { differenceInDays, format, isValid } from 'date-fns';
-import UpgradeModal from './UpgradeModal';
+import { logger } from "../../shared/observability/logger";
+import { useTenant } from "../tenant/TenantContext";
 
-const parseDate = (dateStr: string | undefined | null): Date => {
+import { PieLegend } from "./dashboard/PieLegend";
+import { EmptyState } from "./ui/EmptyState";
+
+import { Skeleton } from "./ui/Skeleton";
+import { Reveal } from "./ui/Reveal";
+
+const cardBase = "rounded-2xl bg-[rgb(var(--surface))] ring-1 ring-black/5 dark:ring-white/10 shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out will-change-transform hover:-translate-y-[1px] hover:ring-[rgb(var(--primary)/0.12)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)]";
+/* ============================================================================
+   Helpers
+============================================================================ */
+
+const parseDateOnly = (dateStr?: string | null): Date => {
   if (!dateStr) return new Date(NaN);
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return new Date(NaN);
-  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
 };
 
-const Dashboard: React.FC = () => {
-  const [allMaintenances, setAllMaintenances] = useState<Maintenance[]>([]);
-  const [filteredData, setFilteredData] = useState<Maintenance[]>([]);
-  const [condos, setCondos] = useState<Condo[]>([]);
-  const [notificationsSent, setNotificationsSent] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  
-  const [selectedCondo, setSelectedCondo] = useState<string>('all');
-  const [timeRange, setTimeRange] = useState<string>('all');
+/* ============================================================================
+   Tooltip
+============================================================================ */
 
-  const user = getUser();
+const ChartTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="rounded-xl border border-black/5 bg-[rgb(var(--surface))] px-3 py-2 shadow-lg shadow-black/5 dark:border-white/10 dark:shadow-black/20">
+      {label ? (
+        <div className="mb-1 text-[11px] uppercase tracking-wide text-black/50 dark:text-white/50">
+          {label}
+        </div>
+      ) : null}
+      <div className="space-y-1">
+        {payload.map((p: any, i: number) => (
+          <div key={i} className="flex justify-between gap-6 text-[11px] text-black/70 dark:text-white/70">
+            <span className="text-black/60 dark:text-white/60">{p.name}</span>
+            <span className="font-semibold text-black/90 dark:text-white">{p.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ============================================================================
+   Dashboard
+============================================================================ */
+
+const Dashboard: React.FC = () => {
+  const { tenantEpoch } = useTenant();
+  const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
+  const [filtered, setFiltered] = useState<Maintenance[]>([]);
+  const [condos, setCondos] = useState<Condo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chartsReady, setChartsReady] = useState(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const data = await getMaintenances();
-        const condosData = await getCondos();
-        setAllMaintenances(data);
-        setFilteredData(data);
-        setCondos(condosData);
-      } catch (e) {
-          console.error("Dashboard Load Error", e);
-      } finally {
-          setLoading(false);
-      }
-    };
-    loadData();
+    const raf = requestAnimationFrame(() => setChartsReady(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const [selectedCondo, setSelectedCondo] = useState("all");
+  const [timeRange, setTimeRange] = useState("all");
+
+  /* ------------------------------------------------------------------------ */
+  /* Load */
+  /* ------------------------------------------------------------------------ */
+
+  const loadSeqRef = useRef(0);
+
+  const loadData = useCallback(async () => {
+    const seq = ++loadSeqRef.current; // marca esta chamada
+
+    setLoading(true);
+
+    console.log("[Dashboard] loadData start", { tenantEpoch, ts: Date.now() });
+
+    try {
+      const [data, condosData] = await Promise.all([
+        getMaintenances(),
+        getCondos(),
+      ]);
+
+      // se não for o último load, abandona
+      if (seq !== loadSeqRef.current) return;
+
+      setMaintenances(data);
+      setFiltered(data);
+      setCondos(condosData);
+      console.log("[Dashboard] loadData ok", {
+        maintenances: data.length,
+        condos: condosData.length,
+        tenantEpoch,
+      });
+    } catch (e) {
+      logger.error("Dashboard load error", e);
+    } finally {
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  useTenantDataLoader({
+    entities: ["maintenances", "condos", "providers"],
+    reload: loadData,
+  });
+
   useEffect(() => {
-    let data = [...allMaintenances];
-    if (selectedCondo !== 'all') data = data.filter(m => m.condoId === selectedCondo);
-    if (timeRange !== 'all') {
-      const daysLimit = parseInt(timeRange);
-      const today = new Date();
-      data = data.filter(m => {
+    loadData();
+  }, [loadData]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Filters */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    let data = [...maintenances];
+    const now = new Date();
+
+    if (selectedCondo !== "all") {
+      data = data.filter((m) => m.condoId === selectedCondo);
+    }
+
+    if (timeRange !== "all") {
+      const limit = Number(timeRange);
+      data = data.filter((m) => {
         if (!m.nextExecutionDate) return false;
-        try {
-            const nextDate = parseDate(m.nextExecutionDate);
-            if (!isValid(nextDate)) return false;
-            const diff = differenceInDays(nextDate, today);
-            return diff <= daysLimit; 
-        } catch { return false; }
+        const d = parseDateOnly(m.nextExecutionDate);
+        if (!isValid(d)) return false;
+        return differenceInDays(d, now) <= limit;
       });
     }
-    setFilteredData(data);
-  }, [selectedCondo, timeRange, allMaintenances]);
 
-  const stats = {
-    total: filteredData.length,
-    completed: filteredData.filter(m => m.status === MaintenanceStatus.COMPLETED).length,
-    overdue: filteredData.filter(m => m.status === MaintenanceStatus.OVERDUE).length,
-    upcoming: filteredData.filter(m => m.status === MaintenanceStatus.ON_TIME || m.status === MaintenanceStatus.WARNING).length,
-  };
+    setFiltered(data);
+  }, [maintenances, selectedCondo, timeRange]);
 
-  const statusData = [
-    { name: 'Em dia', value: filteredData.filter(m => m.status === MaintenanceStatus.ON_TIME).length, color: '#3b82f6' },
-    { name: 'Atenção', value: filteredData.filter(m => m.status === MaintenanceStatus.WARNING).length, color: '#f59e0b' },
-    { name: 'Vencidas', value: stats.overdue, color: '#ef4444' },
-    { name: 'Concluídas', value: stats.completed, color: '#10b981' },
-  ];
+  /* ------------------------------------------------------------------------ */
+  /* Stats (3 estados padronizados) */
+  /* ------------------------------------------------------------------------ */
 
-  const categoryCounts = filteredData.reduce((acc, curr) => {
-    const cat = curr.category;
-    acc[cat] = (acc[cat] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const stats = useMemo(() => {
+    const now = new Date();
 
-  const categoryData = Object.entries(categoryCounts)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => (b.value as number) - (a.value as number))
-    .slice(0, 5); 
+    let overdue = 0;
+    let onTime = 0;
+    let completed = 0;
 
-  const upcomingList = [...filteredData]
-    .filter(m => m.status !== MaintenanceStatus.COMPLETED && m.nextExecutionDate)
-    .sort((a, b) => {
-        try {
-            const dateA = parseDate(a.nextExecutionDate).getTime();
-            const dateB = parseDate(b.nextExecutionDate).getTime();
-            return dateA - dateB;
-        } catch { return 0; }
-    })
-    .slice(0, 5); 
+    for (const m of filtered) {
+      const s = getStatus3(m, now);
+      if (s === "COMPLETED") completed++;
+      else if (s === "OVERDUE") overdue++;
+      else onTime++;
+    }
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-500" size={32} /></div>;
+    return {
+      total: filtered.length,
+      overdue,
+      onTime,
+      completed,
+    };
+  }, [filtered]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Charts */
+  /* ------------------------------------------------------------------------ */
+
+  const statusData = useMemo(() => {
+    return (["OVERDUE", "ON_TIME", "COMPLETED"] as const).map((k) => ({
+      name: STATUS3_LABEL[k],
+      value:
+        k === "OVERDUE"
+          ? stats.overdue
+          : k === "ON_TIME"
+            ? stats.onTime
+            : stats.completed,
+      color: STATUS3_COLOR_TOKEN[k], // já é CSS válido: rgb(var(--...))
+    }));
+  }, [stats]);
+
+  const categoryData = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach((m) => {
+      const key = m.category || "Sem categoria";
+      map[key] = (map[key] || 0) + 1;
+    });
+
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [filtered]);
+
+  const upcomingList = useMemo(() => {
+    const now = new Date();
+
+    return [...filtered]
+      .filter((m) => {
+        if (!m.nextExecutionDate) return false;
+        const s = getStatus3(m, now);
+        return s === "ON_TIME"; // "Próximos ciclos" = tudo que ainda não venceu e não foi concluído
+      })
+      .sort((a, b) => {
+        const da = parseDateOnly(a.nextExecutionDate);
+        const db = parseDateOnly(b.nextExecutionDate);
+        return da.getTime() - db.getTime();
+      })
+      .slice(0, 6);
+  }, [filtered]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Render */
+  /* ------------------------------------------------------------------------ */
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Loader2 className="animate-spin text-black/50 dark:text-white/50" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-10">
-      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} reason="general" />}
+      {showUpgradeModal && (
+        <UpgradeModal
+          onClose={() => setShowUpgradeModal(false)}
+          reason="general"
+        />
+      )}
 
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <LayoutDashboard className="text-blue-600" />
+      {/* Header */}
+      <Reveal>
+        <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: "rgb(var(--primary))" }}
+            />
+            Visão geral operacional
+          </div>
+
+          <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight text-[rgb(var(--primary))]">
+            <span
+              className="grid h-10 w-10 place-items-center rounded-2xl ring-1 ring-black/5 dark:ring-white/10"
+              style={{ background: "rgb(var(--primary)/0.08)" }}
+            >
+              <LayoutDashboard
+                size={20}
+                className="text-[rgb(var(--primary))]"
+              />
+            </span>
             Painel Estratégico
-          </h2>
+          </h1>
+
+          <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+            Status padronizados: <span className="font-semibold">Vencidas</span>
+            , <span className="font-semibold">Em dia</span> e{" "}
+            <span className="font-semibold">Concluídas</span>.
+          </p>
         </div>
-         
-        <div className="flex flex-col sm:flex-row gap-3">
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Building className="absolute left-3 top-2.5 text-slate-400" size={16} />
-            <select 
-              className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm bg-white outline-none w-full sm:w-64"
+            <Building
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40"
+            />
+            <select
+              className="input pl-9 sm:w-64"
               value={selectedCondo}
               onChange={(e) => setSelectedCondo(e.target.value)}
             >
-              <option value="all">Todas as Unidades</option>
-              {condos.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value="all">Todas as unidades</option>
+              {condos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
+
           <div className="relative">
-            <Filter className="absolute left-3 top-2.5 text-slate-400" size={16} />
-            <select 
-              className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm bg-white outline-none w-full sm:w-64"
+            <Filter
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40"
+            />
+            <select
+              className="input pl-9 sm:w-56"
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
             >
-              <option value="all">Todo o Período</option>
+              <option value="all">Todo o período</option>
               <option value="7">Próximos 7 dias</option>
               <option value="30">Próximos 30 dias</option>
               <option value="90">Próximos 90 dias</option>
@@ -144,99 +346,174 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      </Reveal>
+      {/* KPI row */}
+      <Reveal>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: 'Total', val: stats.total, icon: TrendingUp, color: 'blue' },
-          { label: 'Concluídas', val: stats.completed, icon: CheckCircle, color: 'emerald' },
-          { label: 'Vencidas', val: stats.overdue, icon: AlertCircle, color: 'rose' },
-          { label: 'A Vencer', val: stats.upcoming, icon: Clock, color: 'blue' },
-        ].map((kpi, idx) => (
-          <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between group hover:shadow-md transition-all">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{kpi.label}</p>
-              <p className="text-2xl font-black text-slate-800">{kpi.val}</p>
-            </div>
-            <div className={`p-3 rounded-xl ${
-              kpi.color === 'blue' ? 'bg-blue-50 text-blue-600' :
-              kpi.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' :
-              kpi.color === 'amber' ? 'bg-amber-50 text-amber-600' :
-              'bg-rose-50 text-rose-600'
-            }`}>
-              <kpi.icon size={24} />
+          {
+            label: "Total",
+            value: stats.total,
+            icon: TrendingUp,
+            color: "rgb(var(--primary))",
+          },
+          {
+            label: "Em dia",
+            value: stats.onTime,
+            icon: Clock,
+            color: "rgb(var(--primary))",
+          },
+          {
+            label: "Vencidas",
+            value: stats.overdue,
+            icon: AlertCircle,
+            color: "rgb(var(--danger))",
+          },
+          {
+            label: "Concluídas",
+            value: stats.completed,
+            icon: CheckCircle,
+            color: "rgb(var(--success))",
+          },
+        ].map((kpi, i) => (
+          <div key={i} className={`${cardBase} p-5 hover:[transition-delay:0ms]`} style={{ transitionDelay: `${i * 60}ms` }}>
+            <div className="flex justify-between gap-4">
+              <div>
+                <p className="label-eyebrow">{kpi.label}</p>
+                <p className="mt-2 text-3xl font-semibold">{kpi.value}</p>
+              </div>
+              <kpi.icon size={22} style={{ color: kpi.color }} />
             </div>
           </div>
         ))}
       </div>
+      </Reveal>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[350px]">
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">Status Operacional</h3>
-                <div className="h-full pb-10">
-                  <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                      <Pie data={statusData} innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
-                          {statusData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                      </Pie>
-                      <ReTooltip />
-                      </PieChart>
-                  </ResponsiveContainer>
-                </div>
+      {/* Charts */}
+      <Reveal>
+        <div className="grid gap-6 xl:grid-cols-3">
+        <div className={`xl:col-span-2 ${cardBase} p-6`}>
+          <div className="mb-3 flex items-end justify-between gap-4">
+            <div>
+              <p className="label-eyebrow">Distribuição</p>
+              <h3 className="text-sm font-semibold text-black/80 dark:text-white/80">
+                Status operacional
+              </h3>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[350px]">
-                <h3 className="font-bold text-slate-800 mb-4">Maiores Incidências</h3>
-                {categoryData.length > 0 ? (
-                    <div className="h-full pb-10">
-                      <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={categoryData} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                            <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 10}} />
-                            <ReTooltip />
-                            <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                          </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                ) : (
-                    <div className="h-full flex items-center justify-center text-slate-400 text-sm italic">Sem dados suficientes</div>
-                )}
-            </div>
+          </div>
+
+          <div className="h-[320px] min-h-[240px] w-full">
+            {chartsReady && !loading && statusData?.some((s) => s.value > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    dataKey="value"
+                    innerRadius={60}
+                    outerRadius={95}
+                  >
+                    {statusData.map((s, i) => (
+                      <Cell key={i} fill={s.color} />
+                    ))}
+                  </Pie>
+                  <ReTooltip content={<ChartTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState
+                title="Sem dados para o recorte selecionado"
+                subtitle="Cadastre manutenções ou ajuste os filtros para visualizar o gráfico."
+              />
+            )}
+          </div>
+
+          <PieLegend
+            items={statusData.map((s) => ({
+              label: s.name,
+              value: s.value,
+              color: s.color,
+            }))}
+          />
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-bold text-slate-800 text-sm">Próximos Ciclos</h3>
-                <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full uppercase">Agenda</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {upcomingList.length > 0 ? upcomingList.map(item => {
-                     const nextDate = parseDate(item.nextExecutionDate);
-                     if(!isValid(nextDate)) return null;
-                     const isLate = item.status === MaintenanceStatus.OVERDUE;
-                     const isNear = item.status === MaintenanceStatus.WARNING;
-                     return (
-                        <div key={item.id} className="flex gap-3 items-center p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-all group">
-                            <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center shrink-0 border ${
-                              isLate ? 'bg-rose-50 border-rose-100 text-rose-600' : 
-                              isNear ? 'bg-amber-50 border-amber-100 text-amber-600' : 
-                              'bg-blue-50 border-blue-100 text-blue-600'
-                            }`}>
-                                <span className="text-[8px] font-bold uppercase">{format(nextDate, 'MMM')}</span>
-                                <span className="text-lg font-black leading-none">{format(nextDate, 'dd')}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-slate-800 truncate">{item.title}</p>
-                                <p className="text-[10px] text-slate-400 font-bold truncate uppercase">{condos.find(c => c.id === item.condoId)?.name}</p>
-                            </div>
-                        </div>
-                     );
-                }) : <div className="h-full flex flex-col items-center justify-center text-slate-300 py-10">
-                    <Calendar size={48} className="opacity-20 mb-2" />
-                    <p className="text-xs font-bold uppercase tracking-widest opacity-40">Agenda Livre</p>
-                </div>}
-            </div>
+
+        <div className={`${cardBase} p-6`}>
+          <div className="mb-3">
+            <p className="label-eyebrow">Top 6</p>
+            <h3 className="text-sm font-semibold text-black/80 dark:text-white/80">
+              Maiores incidências
+            </h3>
+          </div>
+          <div className="h-[320px] min-h-[240px] w-full">
+            {chartsReady && !loading && categoryData?.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={categoryData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" width={120} />
+                  <ReTooltip content={<ChartTooltip />} />
+                  <Bar
+                    dataKey="value"
+                    fill="rgb(var(--primary))"
+                    radius={[0, 6, 6, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState
+                title="Sem incidências para exibir"
+                subtitle="Quando houver manutenções no período, as categorias aparecem aqui."
+              />
+            )}
+          </div>
         </div>
       </div>
+      </Reveal>
+
+      {/* Upcoming (ON_TIME) */}
+      <Reveal>
+        <div className={`${cardBase} p-6`}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-semibold">Próximos ciclos (Em dia)</h3>
+          <span className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10">
+            <Calendar size={14} className="text-black/50 dark:text-white/50" />
+            Agenda
+          </span>
+        </div>
+
+        {upcomingList.length ? (
+          <div className="space-y-3">
+            {upcomingList.map((m) => {
+              const d = parseDateOnly(m.nextExecutionDate);
+              const condoName = condos.find((c) => c.id === m.condoId)?.name;
+
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 rounded-xl border border-black/10 dark:border-white/10 bg-[rgb(var(--surface))] p-3 transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out will-change-transform hover:-translate-y-[1px] hover:ring-1 hover:ring-[rgb(var(--primary)/0.10)] hover:shadow-[0_10px_22px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_10px_22px_rgba(0,0,0,0.30)]"
+                >
+                  <div className="w-14 text-center font-semibold text-[rgb(var(--primary))]">
+                    {isValid(d) ? format(d, "dd/MM") : "--/--"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate font-medium text-black/90 dark:text-white">
+                      {m.title}
+                    </p>
+                    <p className="truncate text-xs text-black/50 dark:text-white/50">
+                      {condoName || "—"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState
+            title="Nenhum ciclo em dia para este recorte"
+            subtitle="Ajuste filtros ou cadastre novas manutenções com próxima execução."
+          />
+        )}
+      </div>
+      </Reveal>
     </div>
   );
 };

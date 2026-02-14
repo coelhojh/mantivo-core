@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Crown, Check, X, Loader2, Star, Zap, Building } from 'lucide-react';
 import { initiatePagBankCheckout } from '../services/paymentService';
 import { PLAN_LIMITS, PlanType } from '../types';
 import { getUser, upgradePlan } from '../services/storageService';
-
+import { logger } from "../../shared/observability/logger";
 interface UpgradeModalProps {
   onClose: () => void;
   reason: 'condo' | 'maintenance' | 'team' | 'general';
@@ -22,7 +21,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, reason }) => {
         alert(`Plano ${plan.toUpperCase()} ativado com sucesso (Modo Demo)!`);
         onClose();
     } catch (e) {
-        console.error(e);
+        logger.error("Error", e);
         alert("Erro ao simular upgrade.");
     } finally {
         setLoading(null);
@@ -175,3 +174,4 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ onClose, reason }) => {
 };
 
 export default UpgradeModal;
+18446744073709551615

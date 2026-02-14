@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from "react";
+import { preload } from "./services/preload";
+import { useSidebarState } from '../shared/hooks/useSidebarState';
 import {
   LayoutDashboard,
   Calendar,
@@ -14,6 +16,8 @@ import {
   ShieldAlert,
   Truck,
   Settings as SettingsIcon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { User, PlanType } from './types';
 import { getUser, logout } from './services/storageService';
@@ -24,21 +28,67 @@ import CalendarView from './components/CalendarView';
 import Reports from './components/Reports';
 import CondoList from './components/CondoList';
 import CategoryList from './components/CategoryList';
-import AuthScreen from './components/AuthScreen';
 import TeamList from './components/TeamList';
 import Settings from './components/Settings';
 import ProviderList from './components/ProviderList';
-import SetupDatabase from './components/SetupDatabase';
-import SuperAdminPanel from './components/SuperAdminPanel';
 import Logo from './components/Logo';
+import { useTenant } from "./tenant/TenantContext";
+
+import { logger } from "../shared/observability/logger";
+
+
+const AuthScreen = lazy(() => import("./components/AuthScreen"));
+const SetupDatabase = lazy(() => import("./components/SetupDatabase"));
+
+// PATCH 6.4: Smart prefetch (idle) de telas raras. Não altera auth/tenant/RLS.
+// Objetivo: reduzir cold-click em rotas lazy sem aumentar bundle inicial.
+const __prefetchRareScreensOnce = (() => {
+  let did = false;
+  return () => {
+    if (did) return;
+    did = true;preload(() => import("./components/SetupDatabase"));
+    preload(() => import("./components/AuthScreen"));
+  };
+})();
+const SuperAdminPanel = lazy(() => import("./components/SuperAdminPanel"));
+
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
+  const { tenantId, setTenantId } = useTenant();
+
+    useEffect(() => {
+  // mantém apenas sincronização do cache de usuário
+  const syncUserCache = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem("cg_user_cache") || "null");
+      if (cached?.id) setUser(cached);
+    } catch {}
+  };
+
+  syncUserCache();
+
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === "cg_user_cache") syncUserCache();
+  };
+
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}, []);
+
+  // Desktop: colapsado/expandido (persistido por usuário)
+  const {
+    collapsed: sidebarCollapsed,
+    setCollapsed: setSidebarCollapsed,
+    toggle: toggleSidebarCollapsed,
+  } = useSidebarState(user?.id ?? null);
+
+  // Mobile: drawer aberto/fechado
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (window.location.search.includes('setup=true')) {
@@ -53,6 +103,9 @@ const App: React.FC = () => {
       try {
         const cached = getUser();
         if (cached) setUser(cached);
+        if (cached?.activeTenantId && cached.activeTenantId !== tenantId) {
+  setTenantId(cached.activeTenantId, { reason: "restore" });
+}
 
         const supabase = getSupabase();
         if (!supabase) {
@@ -71,30 +124,37 @@ const App: React.FC = () => {
             .single();
 
           if (profile) {
-            const isSuperAdmin =
-              cached?.role === 'super_admin' || profile.role === 'super_admin';
+  const isSuperAdmin =
+    cached?.role === 'super_admin' || profile.role === 'super_admin';
 
-            const userData: User = {
-              id: profile.id,
-              name: profile.name,
-              email: profile.email,
-              companyName: isSuperAdmin ? 'MANTIVO ADMIN' : profile.company_name,
-              role: isSuperAdmin ? 'super_admin' : profile.role,
-              plan: isSuperAdmin ? 'enterprise' : (profile.plan as PlanType),
-              accountId: profile.account_id,
-              preferences: profile.preferences,
-              permissions: isSuperAdmin
-                ? { canEdit: true, canDelete: true }
-                : profile.permissions || { canEdit: false, canDelete: false },
-              allowedCondos: profile.allowed_condos || [],
-            };
+  const userData: User = {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    companyName: isSuperAdmin ? 'MANTIVO ADMIN' : profile.company_name,
+    role: isSuperAdmin ? 'super_admin' : profile.role,
+    plan: isSuperAdmin ? 'enterprise' : (profile.plan as PlanType),
+    activeTenantId: (profile as any).active_tenant_id || null,
+    preferences: profile.preferences,
+    permissions: isSuperAdmin
+      ? { canEdit: true, canDelete: true }
+      : profile.permissions || { canEdit: false, canDelete: false },
+    allowedCondos: profile.allowed_condos || [],
+  };
 
-            localStorage.setItem('cg_user_cache', JSON.stringify(userData));
-            setUser(userData);
-          }
+  // ✅ Fase B (passo 2): espelha tenant do profile no TenantContext
+  const nextTenant = userData.activeTenantId ?? null;
+  if (nextTenant && nextTenant !== tenantId) {
+    setTenantId(nextTenant, { reason: "restore" });
+  }
+
+  localStorage.setItem('cg_user_cache', JSON.stringify(userData));
+  setUser(userData);
+}
+
         }
       } catch (e) {
-        console.error('Critical Auth Error:', e);
+        logger.error('Critical Auth Error:', e);
       } finally {
         clearTimeout(timeout);
         setAuthChecked(true);
@@ -106,7 +166,7 @@ const App: React.FC = () => {
     const handleResize = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile);
+      if (mobile) setMobileSidebarOpen(false);
     };
 
     handleResize();
@@ -137,7 +197,7 @@ const App: React.FC = () => {
 
   const handleNavClick = (viewId: string) => {
     setCurrentView(viewId);
-    if (isMobile) setIsSidebarOpen(false);
+    if (isMobile) setMobileSidebarOpen(false);
   };
 
   const renderView = () => {
@@ -167,7 +227,7 @@ const App: React.FC = () => {
           return <Dashboard />;
       }
     } catch (e) {
-      console.error('Render View Error:', e);
+      logger.error('Render View Error:', e);
       return (
         <div className="p-8">
           Erro ao carregar componente. Verifique o console.
@@ -175,6 +235,16 @@ const App: React.FC = () => {
       );
     }
   };
+
+  // PATCH 6.4: prefetch idle de telas raras (Smart Preload)
+  useEffect(() => {
+    if (!user) return;
+    __prefetchRareScreensOnce();
+    if (user.role === "super_admin") {
+      preload(() => import("./components/SuperAdminPanel"));
+    }
+  }, [user]);
+
 
   if (!authChecked) {
     return (
@@ -209,31 +279,33 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen supports-[height:100dvh]:h-[100dvh] bg-[rgb(var(--bg))] text-[rgb(var(--text))] overflow-hidden relative print:overflow-visible print:h-auto print:block">
-      {isMobile && isSidebarOpen && (
+      {isMobile && mobileSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 transition-opacity print:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={() => setMobileSidebarOpen(false)}
         />
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 bg-slate-950 text-white transition-all duration-300 flex flex-col print:hidden
+        className={`fixed lg:static inset-y-0 left-0 z-50 bg-slate-950 text-white transition-[width,transform] duration-300 flex flex-col print:hidden
         ${
-          isSidebarOpen
-            ? 'translate-x-0 w-72 shadow-2xl shadow-black/30'
-            : isMobile
-            ? '-translate-x-full w-72'
-            : 'w-20 translate-x-0'
+          isMobile
+            ? mobileSidebarOpen
+              ? 'translate-x-0 w-72 shadow-2xl shadow-black/30'
+              : '-translate-x-full w-72'
+            : sidebarCollapsed
+            ? 'w-20 translate-x-0'
+            : 'w-72 translate-x-0'
         }`}
       >
         <div className="px-6 py-5 flex items-center justify-between h-20 shrink-0 border-b border-white/5">
           <div
             className={`flex items-center gap-3 ${
-              !isSidebarOpen && !isMobile ? 'justify-center w-full' : ''
+              !isMobile && sidebarCollapsed ? 'justify-center w-full' : ''
             }`}
           >
             <Logo size={38} />
-            {isSidebarOpen && (
+            {(isMobile || !sidebarCollapsed) && (
               <div className="flex flex-col leading-tight">
                 <span className="font-extrabold text-lg tracking-tight whitespace-nowrap">
                   Mantivo
@@ -245,9 +317,22 @@ const App: React.FC = () => {
             )}
           </div>
 
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={toggleSidebarCollapsed}
+              className={`text-slate-300 hover:text-white p-2 hover:bg-white/10 rounded-xl ${focusRingDark}`}
+              aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+              aria-expanded={!sidebarCollapsed}
+              title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+            >
+              {sidebarCollapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
+            </button>
+          )}
+
           {isMobile && (
             <button
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={() => setMobileSidebarOpen(false)}
               className={`text-slate-300 hover:text-white p-2 hover:bg-white/10 rounded-xl ${focusRingDark}`}
               aria-label="Fechar menu"
             >
@@ -263,8 +348,9 @@ const App: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
+                title={!isMobile && sidebarCollapsed ? item.label : undefined}
                 className={`w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 whitespace-nowrap group ${focusRingDark}
-                  ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}
+                  ${!isMobile && sidebarCollapsed ? 'justify-center' : ''}
                   ${
                     active
                       ? 'bg-[rgb(var(--primary))] text-white shadow-[0_10px_30px_rgba(96,37,129,.25)]'
@@ -277,11 +363,15 @@ const App: React.FC = () => {
                     !active ? 'group-hover:scale-110' : ''
                   }`}
                 />
-                {isSidebarOpen && (
-                  <span className="font-semibold text-sm tracking-tight">
-                    {item.label}
-                  </span>
-                )}
+                <span
+                  className={`font-semibold text-sm tracking-tight overflow-hidden whitespace-nowrap transition-[opacity,max-width] duration-200 ${
+                    isMobile || !sidebarCollapsed
+                      ? 'opacity-100 max-w-[220px]'
+                      : 'opacity-0 max-w-0 pointer-events-none'
+                  }`}
+                >
+                  {item.label}
+                </span>
               </button>
             );
           })}
@@ -290,7 +380,7 @@ const App: React.FC = () => {
             <button
               onClick={() => handleNavClick('superadmin')}
               className={`w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 whitespace-nowrap mt-8 border border-red-900/30 ${focusRingDark}
-                ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}
+                ${!isMobile && sidebarCollapsed ? 'justify-center' : ''}
                 ${
                   currentView === 'superadmin'
                     ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
@@ -298,7 +388,7 @@ const App: React.FC = () => {
                 }`}
             >
               <ShieldAlert size={20} className="shrink-0" />
-              {isSidebarOpen && (
+              {(isMobile || !sidebarCollapsed) && (
                 <span className="font-bold text-sm">Painel Master</span>
               )}
             </button>
@@ -306,7 +396,7 @@ const App: React.FC = () => {
         </nav>
 
         <div className="p-6 border-t border-white/5 bg-slate-950/60 shrink-0">
-          {isSidebarOpen ? (
+          {(isMobile || !sidebarCollapsed) ? (
             <div className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
               <div className="w-10 h-10 rounded-xl bg-[rgb(var(--primary))] flex items-center justify-center text-white font-extrabold shrink-0 shadow-lg">
                 {user.name.charAt(0)}
@@ -349,9 +439,9 @@ const App: React.FC = () => {
         <header className="h-20 bg-[rgb(var(--surface))] border-b border-[rgb(var(--border))] flex items-center justify-between px-6 lg:px-10 shrink-0 print:hidden z-30">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              onClick={() => setMobileSidebarOpen((v) => !v)}
               className={`p-2 text-slate-700 lg:hidden hover:bg-slate-100 rounded-xl ${focusRingLight}`}
-              aria-label="Abrir menu"
+              aria-label={mobileSidebarOpen ? "Fechar menu" : "Abrir menu"}
             >
               <Menu size={22} />
             </button>
@@ -362,6 +452,12 @@ const App: React.FC = () => {
                   ? 'Painel Master'
                   : navItems.find((n) => n.id === currentView)?.label}
               </h1>
+
+              {/* DEBUG tenant (temporário) */}
+              <div className="text-[10px] text-slate-400 mt-1 select-all">
+                tenant: {user?.activeTenantId || "null"}
+              </div>
+
               <p className="text-xs font-medium text-[rgb(var(--muted))] tracking-wide">
                 Visão geral operacional
               </p>
@@ -379,7 +475,9 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto p-5 lg:p-8 print:overflow-visible print:h-auto">
           <div className="max-w-[1600px] mx-auto">
             <div className="rounded-[var(--radius)] bg-[rgb(var(--surface))] border border-[rgb(var(--border))] shadow-[var(--shadow)]">
-              <div className="p-5 lg:p-7">{renderView()}</div>
+                <div className="p-5 lg:p-7">
+  <Suspense fallback={null}>{renderView()}</Suspense>
+</div>
             </div>
           </div>
         </div>

@@ -1,4 +1,13 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { emitMany, type Entity } from "./invalidationBus";
+import { startTenantRealtime, stopTenantRealtime } from "../services/realtimeTenantService";
+
+const CRITICAL_ENTITIES: Entity[] = [
+  "maintenances",
+  "providers",
+  "condos",
+  "categories",
+];
 
 type TenantChangeReason = "boot" | "switcher" | "restore" | "unknown";
 
@@ -30,7 +39,19 @@ export function TenantProvider(props: { initialTenantId?: string | null; childre
       _setTenantId((prev) => {
         if (prev === next) return prev;
           setTenantEpoch((e) => e + 1);
-          // dispara evento interno
+          if (next) {
+            emitMany(
+              CRITICAL_ENTITIES.map((entity) => ({
+                tenantId: next,
+                entity,
+                reason: "system" as const,
+                at: Date.now(),
+                source: "TenantProvider.setTenantId",
+              }))
+            );
+          }
+
+// dispara evento interno
           listenersRef.current.forEach((fn) => {
             try {
               fn(next);
@@ -45,6 +66,19 @@ export function TenantProvider(props: { initialTenantId?: string | null; childre
     },
     []
   );
+
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const stop = startTenantRealtime(tenantId);
+    return () => {
+      try {
+        stop?.();
+      } finally {
+        stopTenantRealtime();
+      }
+    };
+  }, [tenantId]);
 
   const value = useMemo<TenantContextValue>(
     () => ({ tenantId, tenantEpoch, setTenantId, onTenantChange }),

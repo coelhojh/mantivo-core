@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
+import { preload } from "./services/preload";
 import { useSidebarState } from '../shared/hooks/useSidebarState';
 import {
   LayoutDashboard,
@@ -38,6 +39,19 @@ import { logger } from "../shared/observability/logger";
 
 const AuthScreen = lazy(() => import("./components/AuthScreen"));
 const SetupDatabase = lazy(() => import("./components/SetupDatabase"));
+
+// PATCH 6.4: Smart prefetch (idle) de telas raras. Não altera auth/tenant/RLS.
+// Objetivo: reduzir cold-click em rotas lazy sem aumentar bundle inicial.
+const __prefetchRareScreensOnce = (() => {
+  let did = false;
+  return () => {
+    if (did) return;
+    did = true;
+    preload(() => import("./components/SuperAdminPanel"));
+    preload(() => import("./components/SetupDatabase"));
+    preload(() => import("./components/AuthScreen"));
+  };
+})();
 const SuperAdminPanel = lazy(() => import("./components/SuperAdminPanel"));
 
 
@@ -223,6 +237,13 @@ const App: React.FC = () => {
       );
     }
   };
+
+  // PATCH 6.4: prefetch idle de telas raras (Smart Preload)
+  useEffect(() => {
+    if (!user) return;
+    __prefetchRareScreensOnce();
+  }, [user]);
+
 
   if (!authChecked) {
     return (

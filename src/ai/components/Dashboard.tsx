@@ -10,6 +10,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { preload } from "../services/preload";
 import { getMaintenances, getCondos } from "../services/storageService";
 import { useTenantDataLoader } from "../tenant/useTenantDataLoader";
 import { Maintenance, Condo } from "../types";

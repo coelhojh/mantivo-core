@@ -46,37 +46,24 @@ const App: React.FC = () => {
   const [showSetup, setShowSetup] = useState(false);
   const { tenantId, setTenantId } = useTenant();
 
-    const [tenantVersion, setTenantVersion] = useState<number>(() => {
-    return Number(localStorage.getItem("tenant_version") || "0");
-  });
+    useEffect(() => {
+  // mantém apenas sincronização do cache de usuário
+  const syncUserCache = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem("cg_user_cache") || "null");
+      if (cached?.id) setUser(cached);
+    } catch {}
+  };
 
-  useEffect(() => {
-    const sync = () => {
-      const v = Number(localStorage.getItem("tenant_version") || "0");
-      setTenantVersion(v);
+  syncUserCache();
 
-      try {
-        const cached = JSON.parse(localStorage.getItem("cg_user_cache") || "null");
-        if (cached?.id) setUser(cached);
-      } catch {}
-    };
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === "cg_user_cache") syncUserCache();
+  };
 
-    const onTenantChanged = () => { void Promise.resolve(sync()); };
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "tenant_version") {
-        void Promise.resolve(sync());
-      }
-    };
-
-    window.addEventListener("mantivo:tenant-changed", onTenantChanged);
-    window.addEventListener("storage", onStorage);
-
-    return () => {
-      window.removeEventListener("mantivo:tenant-changed", onTenantChanged);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}, []);
 
   // Desktop: colapsado/expandido (persistido por usuário)
   const {
@@ -472,7 +459,7 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto p-5 lg:p-8 print:overflow-visible print:h-auto">
           <div className="max-w-[1600px] mx-auto">
             <div className="rounded-[var(--radius)] bg-[rgb(var(--surface))] border border-[rgb(var(--border))] shadow-[var(--shadow)]">
-              <div className="p-5 lg:p-7" key={"tenant-" + tenantVersion}>
+                <div className="p-5 lg:p-7">
   {renderView()}
 </div>
             </div>

@@ -69,17 +69,17 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg">
+    <div className="rounded-xl border border-black/5 bg-[rgb(var(--surface))] px-3 py-2 shadow-lg shadow-black/5 dark:border-white/10 dark:shadow-black/20">
       {label ? (
-        <div className="mb-1 text-[11px] font-semibold text-slate-700">
+        <div className="mb-1 text-[11px] uppercase tracking-wide text-black/50 dark:text-white/50">
           {label}
         </div>
       ) : null}
       <div className="space-y-1">
         {payload.map((p: any, i: number) => (
-          <div key={i} className="flex justify-between gap-6 text-[11px]">
-            <span className="text-slate-600">{p.name}</span>
-            <span className="font-semibold text-slate-900">{p.value}</span>
+          <div key={i} className="flex justify-between gap-6 text-[11px] text-black/70 dark:text-white/70">
+            <span className="text-black/60 dark:text-white/60">{p.name}</span>
+            <span className="font-semibold text-black/90 dark:text-white">{p.value}</span>
           </div>
         ))}
       </div>
@@ -262,7 +262,7 @@ const Dashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="animate-spin text-slate-500" />
+        <Loader2 className="animate-spin text-black/50 dark:text-white/50" />
       </div>
     );
   }
@@ -279,7 +279,7 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] font-semibold text-black/70 ring-1 ring-black/5 dark:text-white/70 dark:ring-white/10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10 dark:ring-white/10">
             <span
               className="h-2 w-2 rounded-full"
               style={{ background: "rgb(var(--primary))" }}
@@ -312,7 +312,7 @@ const Dashboard: React.FC = () => {
           <div className="relative">
             <Building
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40"
             />
             <select
               className="input pl-9 sm:w-64"
@@ -331,7 +331,7 @@ const Dashboard: React.FC = () => {
           <div className="relative">
             <Filter
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40"
             />
             <select
               className="input pl-9 sm:w-56"
@@ -468,8 +468,8 @@ const Dashboard: React.FC = () => {
       <div className={`${cardBase} p-6`}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold">Próximos ciclos (Em dia)</h3>
-          <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700">
-            <Calendar size={14} className="text-slate-500" />
+          <span className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10 dark:ring-white/10">
+            <Calendar size={14} className="text-black/50 dark:text-white/50" />
             Agenda
           </span>
         </div>
@@ -489,10 +489,10 @@ const Dashboard: React.FC = () => {
                     {isValid(d) ? format(d, "dd/MM") : "--/--"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="truncate font-medium text-slate-900">
+                    <p className="truncate font-medium text-black/90 dark:text-white">
                       {m.title}
                     </p>
-                    <p className="truncate text-xs text-slate-500">
+                    <p className="truncate text-xs text-black/50 dark:text-white/50">
                       {condoName || "—"}
                     </p>
                   </div>

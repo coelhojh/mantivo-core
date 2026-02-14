@@ -154,7 +154,7 @@ const CalendarView: React.FC = () => {
                   <span
                     className="h-1.5 w-1.5 rounded-full"
                     style={{ background: "rgb(var(--success))" }}
-                    title={` concluída(s)`}
+                    title={`${dayStatus.done} concluída(s)`}
                   />
                 ) : null}
               </div>

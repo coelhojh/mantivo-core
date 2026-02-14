@@ -119,4 +119,49 @@
     background: rgb(var(--accent) / 0.12);
     color: rgb(var(--accent));
   }
+
+  /* -------------------------------------------------------------------------- */
+/* PATCH 6 — Skeleton shimmer (dark-mode safe)                                */
+/* -------------------------------------------------------------------------- */
+
+@keyframes mantivo-shimmer {
+  0%   { transform: translateX(-60%); }
+  100% { transform: translateX(60%); }
+}
+
+.mantivo-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: rgb(var(--surface));
+}
+
+.mantivo-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-60%);
+  animation: mantivo-shimmer 1.6s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.10),
+    transparent
+  );
+}
+
+/* Dark: brilho mais contido */
+.dark .mantivo-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.06),
+    transparent
+  );
+}
+
+/* Respeita reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .mantivo-skeleton::after { animation: none; }
+}
 }

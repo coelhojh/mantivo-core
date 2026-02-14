@@ -279,7 +279,7 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10 dark:ring-white/10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10">
             <span
               className="h-2 w-2 rounded-full"
               style={{ background: "rgb(var(--primary))" }}
@@ -468,7 +468,7 @@ const Dashboard: React.FC = () => {
       <div className={`${cardBase} p-6`}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold">Próximos ciclos (Em dia)</h3>
-          <span className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10 dark:ring-white/10">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10">
             <Calendar size={14} className="text-black/50 dark:text-white/50" />
             Agenda
           </span>

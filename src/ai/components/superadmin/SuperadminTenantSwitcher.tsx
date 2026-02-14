@@ -103,10 +103,14 @@ const SuperadminTenantSwitcher: React.FC = () => {
       {loading ? (
         <div className="text-sm text-amber-800">Carregando tenants...</div>
       ) : tenants.length === 0 ? (
-        <div className="text-sm text-amber-800">
-          Nenhum tenant encontrado (verifique RPC/permissões).
-        </div>
-      ) : (
+  <div className="text-sm text-amber-800">
+    Nenhum tenant encontrado. Causas comuns:
+    <ul className="mt-2 list-disc pl-5 text-amber-800/90">
+      <li>Você não tem <b>role</b> <code>super_admin</code> no <code>profiles</code>.</li>
+      <li>Não há tenants cadastrados na tabela <code>tenants</code>.</li>
+    </ul>
+  </div>
+) : (
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold text-amber-800">
             Tenant ativo

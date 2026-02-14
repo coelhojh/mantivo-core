@@ -1,6 +1,7 @@
 import { getStatus3, STATUS3_LABEL, STATUS3_COLOR_TOKEN } from '../../shared/utils/maintenanceStatus';
 import React, { useEffect, useMemo, useState } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
+import { useTenantDataLoader } from "../tenant/useTenantDataLoader";
 import { Maintenance, Condo } from '../types';
 import {
   BarChart,
@@ -74,6 +75,13 @@ const Dashboard: React.FC = () => {
   const [filtered, setFiltered] = useState<Maintenance[]>([]);
   const [condos, setCondos] = useState<Condo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chartsReady, setChartsReady] = useState(false);
+
+useEffect(() => {
+  const raf = requestAnimationFrame(() => setChartsReady(true));
+  return () => cancelAnimationFrame(raf);
+}, []);
+
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [selectedCondo, setSelectedCondo] = useState('all');
@@ -83,22 +91,29 @@ const Dashboard: React.FC = () => {
   /* Load */
   /* ------------------------------------------------------------------------ */
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await getMaintenances();
-        const condosData = await getCondos();
-        setMaintenances(data);
-        setFiltered(data);
-        setCondos(condosData);
-      } catch (e) {
-        logger.error('Dashboard load error', e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [tenantEpoch]);
+  const loadData = async () => {
+  setLoading(true);
+  try {
+    const data = await getMaintenances();
+    const condosData = await getCondos();
+    setMaintenances(data);
+    setFiltered(data);
+    setCondos(condosData);
+  } catch (e) {
+    logger.error("Dashboard load error", e);
+  } finally {
+    setLoading(false);
+  }
+};
+
+useTenantDataLoader({
+  entities: ["maintenances", "condos", "providers"],
+  reload: loadData,
+});
+
+useEffect(() => {
+  loadData();
+}, [tenantEpoch]);
 
   /* ------------------------------------------------------------------------ */
   /* Filters */
@@ -284,33 +299,41 @@ const Dashboard: React.FC = () => {
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2 surface p-6">
           <h3 className="mb-3 font-semibold">Status operacional</h3>
-          <div className="h-[320px]">
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie data={statusData} dataKey="value" innerRadius={60} outerRadius={95}>
-                  {statusData.map((s, i) => (
-                    <Cell key={i} fill={s.color} />
-                  ))}
-                </Pie>
-                <ReTooltip content={<ChartTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <div className="h-[320px] min-h-[240px] w-full">
+  {chartsReady && !loading && statusData?.length ? (
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie data={statusData} dataKey="value" innerRadius={60} outerRadius={95}>
+          {statusData.map((s, i) => (
+            <Cell key={i} fill={s.color} />
+          ))}
+        </Pie>
+        <ReTooltip content={<ChartTooltip />} />
+      </PieChart>
+    </ResponsiveContainer>
+  ) : (
+    <div className="h-full w-full" />
+  )}
+</div>
         </div>
 
         <div className="surface p-6">
           <h3 className="mb-3 font-semibold">Maiores incidências</h3>
-          <div className="h-[320px]">
-            <ResponsiveContainer>
-              <BarChart data={categoryData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={120} />
-                <ReTooltip content={<ChartTooltip />} />
-                <Bar dataKey="value" fill="rgb(var(--primary))" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <div className="h-[320px] min-h-[240px] w-full">
+  {chartsReady && !loading && categoryData?.length ? (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={categoryData} layout="vertical">
+        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+        <XAxis type="number" hide />
+        <YAxis dataKey="name" type="category" width={120} />
+        <ReTooltip content={<ChartTooltip />} />
+        <Bar dataKey="value" fill="rgb(var(--primary))" radius={[0, 6, 6, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  ) : (
+    <div className="h-full w-full" />
+  )}
+</div>
         </div>
       </div>
 

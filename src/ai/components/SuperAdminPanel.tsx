@@ -64,7 +64,11 @@ const SuperAdminPanel: React.FC = () => {
             </div>
             <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b border-slate-100 font-bold text-slate-400 text-[10px] uppercase">
-                    <tr> <th className="px-6 py-3">Cliente</th> <th className="px-6 py-3">Plano</th> <th className="px-6 py-3 text-right">Ações</th> </tr>
+                    <tr>
+  <th className="px-6 py-3">Cliente</th>
+  <th className="px-6 py-3">Plano</th>
+  <th className="px-6 py-3 text-right">Ações</th>
+</tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                     {filteredTenants.map(t => (

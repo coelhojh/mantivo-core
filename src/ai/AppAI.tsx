@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useSidebarState } from '../shared/hooks/useSidebarState';
 import {
   LayoutDashboard,
@@ -27,16 +27,19 @@ import CalendarView from './components/CalendarView';
 import Reports from './components/Reports';
 import CondoList from './components/CondoList';
 import CategoryList from './components/CategoryList';
-import AuthScreen from './components/AuthScreen';
 import TeamList from './components/TeamList';
 import Settings from './components/Settings';
 import ProviderList from './components/ProviderList';
-import SetupDatabase from './components/SetupDatabase';
-import SuperAdminPanel from './components/SuperAdminPanel';
 import Logo from './components/Logo';
 import { useTenant } from "./tenant/TenantContext";
 
 import { logger } from "../shared/observability/logger";
+
+
+const AuthScreen = lazy(() => import("./components/AuthScreen"));
+const SetupDatabase = lazy(() => import("./components/SetupDatabase"));
+const SuperAdminPanel = lazy(() => import("./components/SuperAdminPanel"));
+
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -93,15 +96,6 @@ const App: React.FC = () => {
 }
 
         const supabase = getSupabase();
-
-          // DEBUG (temporário): diagnóstico da config do Supabase no Preview
-          import("./services/supabaseClient")
-            .then((mod) => {
-              const cfg = (mod as any).getActiveConfig?.();
-              void cfg;
-            })
-            .catch(() => {});
-
         if (!supabase) {
           clearTimeout(timeout);
           setAuthChecked(true);
@@ -460,7 +454,7 @@ const App: React.FC = () => {
           <div className="max-w-[1600px] mx-auto">
             <div className="rounded-[var(--radius)] bg-[rgb(var(--surface))] border border-[rgb(var(--border))] shadow-[var(--shadow)]">
                 <div className="p-5 lg:p-7">
-  {renderView()}
+  <Suspense fallback={null}>{renderView()}</Suspense>
 </div>
             </div>
           </div>

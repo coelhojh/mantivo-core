@@ -34,6 +34,7 @@ import ProviderList from './components/ProviderList';
 import SetupDatabase from './components/SetupDatabase';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import Logo from './components/Logo';
+import { useTenant } from "./tenant/TenantContext";
 
 import { logger } from "../shared/observability/logger";
 
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
+  const { tenantId, setTenantId } = useTenant();
 
     const [tenantVersion, setTenantVersion] = useState<number>(() => {
     return Number(localStorage.getItem("tenant_version") || "0");
@@ -99,6 +101,9 @@ const App: React.FC = () => {
       try {
         const cached = getUser();
         if (cached) setUser(cached);
+        if (cached?.activeTenantId && cached.activeTenantId !== tenantId) {
+  setTenantId(cached.activeTenantId, { reason: "restore" });
+}
 
         const supabase = getSupabase();
 
@@ -126,27 +131,34 @@ const App: React.FC = () => {
             .single();
 
           if (profile) {
-            const isSuperAdmin =
-              cached?.role === 'super_admin' || profile.role === 'super_admin';
+  const isSuperAdmin =
+    cached?.role === 'super_admin' || profile.role === 'super_admin';
 
-            const userData: User = {
-              id: profile.id,
-              name: profile.name,
-              email: profile.email,
-              companyName: isSuperAdmin ? 'MANTIVO ADMIN' : profile.company_name,
-              role: isSuperAdmin ? 'super_admin' : profile.role,
-              plan: isSuperAdmin ? 'enterprise' : (profile.plan as PlanType),
-              activeTenantId: (profile as any).active_tenant_id || null,
-              preferences: profile.preferences,
-              permissions: isSuperAdmin
-                ? { canEdit: true, canDelete: true }
-                : profile.permissions || { canEdit: false, canDelete: false },
-              allowedCondos: profile.allowed_condos || [],
-            };
+  const userData: User = {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    companyName: isSuperAdmin ? 'MANTIVO ADMIN' : profile.company_name,
+    role: isSuperAdmin ? 'super_admin' : profile.role,
+    plan: isSuperAdmin ? 'enterprise' : (profile.plan as PlanType),
+    activeTenantId: (profile as any).active_tenant_id || null,
+    preferences: profile.preferences,
+    permissions: isSuperAdmin
+      ? { canEdit: true, canDelete: true }
+      : profile.permissions || { canEdit: false, canDelete: false },
+    allowedCondos: profile.allowed_condos || [],
+  };
 
-            localStorage.setItem('cg_user_cache', JSON.stringify(userData));
-            setUser(userData);
-          }
+  // ✅ Fase B (passo 2): espelha tenant do profile no TenantContext
+  const nextTenant = userData.activeTenantId ?? null;
+  if (nextTenant && nextTenant !== tenantId) {
+    setTenantId(nextTenant, { reason: "restore" });
+  }
+
+  localStorage.setItem('cg_user_cache', JSON.stringify(userData));
+  setUser(userData);
+}
+
         }
       } catch (e) {
         logger.error('Critical Auth Error:', e);

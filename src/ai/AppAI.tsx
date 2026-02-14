@@ -46,9 +46,7 @@ const __prefetchRareScreensOnce = (() => {
   let did = false;
   return () => {
     if (did) return;
-    did = true;
-    preload(() => import("./components/SuperAdminPanel"));
-    preload(() => import("./components/SetupDatabase"));
+    did = true;preload(() => import("./components/SetupDatabase"));
     preload(() => import("./components/AuthScreen"));
   };
 })();
@@ -242,6 +240,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     __prefetchRareScreensOnce();
+    if (user.role === "super_admin") {
+      preload(() => import("./components/SuperAdminPanel"));
+    }
   }, [user]);
 
 

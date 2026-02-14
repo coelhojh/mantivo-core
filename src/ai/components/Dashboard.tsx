@@ -1,5 +1,5 @@
 import { getStatus3, STATUS3_LABEL, STATUS3_COLOR_TOKEN } from '../../shared/utils/maintenanceStatus';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getMaintenances, getCondos } from '../services/storageService';
 import { useTenantDataLoader } from "../tenant/useTenantDataLoader";
 import { Maintenance, Condo } from '../types';
@@ -91,29 +91,45 @@ useEffect(() => {
   /* Load */
   /* ------------------------------------------------------------------------ */
 
-  const loadData = async () => {
+  const loadSeqRef = useRef(0);
+
+const loadData = useCallback(async () => {
+  const seq = ++loadSeqRef.current; // marca esta chamada
+
   setLoading(true);
+
+  console.log("[Dashboard] loadData start", { tenantEpoch, ts: Date.now() });
+
   try {
-    const data = await getMaintenances();
-    const condosData = await getCondos();
+    const [data, condosData] = await Promise.all([
+      getMaintenances(),
+      getCondos(),
+    ]);
+
+    // se não for o último load, abandona
+    if (seq !== loadSeqRef.current) return;
+
     setMaintenances(data);
     setFiltered(data);
-    setCondos(condosData);
+      setCondos(condosData);
+  console.log("[Dashboard] loadData ok", { maintenances: data.length, condos: condosData.length, tenantEpoch });
   } catch (e) {
     logger.error("Dashboard load error", e);
   } finally {
-    setLoading(false);
+    if (seq === loadSeqRef.current) {
+      setLoading(false);
+    }
   }
-};
+  }, []);
 
 useTenantDataLoader({
   entities: ["maintenances", "condos", "providers"],
   reload: loadData,
 });
 
-useEffect(() => {
-  loadData();
-}, [tenantEpoch]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   /* ------------------------------------------------------------------------ */
   /* Filters */
@@ -375,4 +391,3 @@ useEffect(() => {
 };
 
 export default Dashboard;
-18446744073709551614

@@ -4,7 +4,7 @@ import { Maintenance, Condo } from '../types';
 import { format, eachDayOfInterval, isSameMonth, isSameDay, addMonths, isValid } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Tag, Loader2, Printer, Building, Clock, Wrench } from 'lucide-react';
 import { logger } from "../../shared/observability/logger";
-import { getMaintenanceStatusColor } from "../theme/maintenanceTheme";
+import { getMaintenanceStatusColor, getMantivoMaintenanceStatus } from "../theme/maintenanceTheme";
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const endOfMonth = (d: Date) => {
     const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
@@ -122,7 +122,7 @@ const CalendarView: React.FC = () => {
           const isToday = isSameDay(day, new Date());
           const isCurrentMonth = isSameMonth(day, currentDate);
           return (
-            <div key={day.toISOString()} className={`min-h-[100px] border-r border-b border-slate-100 p-1 flex flex-col gap-1 ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-blue-50/30' : ''}`}>
+            <div key={day.toISOString()} className={`min-h-[100px] border-r border-b border-slate-100 p-1 flex flex-col gap-1 ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} `}>
               <div className={`text-[10px] font-bold p-1 rounded-md w-6 h-6 flex items-center justify-center ${isToday ? 'bg-blue-600 text-white shadow-sm' : isCurrentMonth ? 'text-slate-600' : 'text-slate-300'}`}>{format(day, 'd')}</div>
               <div className="flex flex-col gap-1 overflow-y-auto max-h-[80px] scrollbar-none">{dayItems.map(item => (<MaintenanceCard key={item.id} item={item} condoName={getCondoName(item.condoId)} onClick={() => setSelectedItem(item)} />))}</div>
             </div>

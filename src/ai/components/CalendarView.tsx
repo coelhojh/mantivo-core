@@ -43,7 +43,7 @@ const parseISO = (dateStr: string | undefined | null): Date => {
 
 
 const MaintenanceCard: React.FC<{ item: Maintenance; condoName: string; onClick?: (e: any) => void }> = ({ item, condoName, onClick }) => (
-  <div onClick={onClick} className={`px-1.5 py-1 rounded border cursor-pointer transition shadow-sm hover:opacity-80 ${getMaintenanceStatusColor(item)}`}>
+  <div onClick={onClick} className={`relative pl-2 pr-1.5 py-1 rounded-xl border cursor-pointer transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-l-xl ${getMaintenanceStatusColor(item)}`}>
       <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1 font-bold text-[10px] leading-tight overflow-hidden"><span className="truncate w-full">{condoName}</span></div>
           <div className="flex items-center gap-1 opacity-90 text-[9px] leading-tight overflow-hidden"><Tag size={8} className="shrink-0" /> <span className="truncate">{item.title}</span></div>

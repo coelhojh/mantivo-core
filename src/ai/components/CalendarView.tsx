@@ -121,9 +121,43 @@ const CalendarView: React.FC = () => {
           const dayItems = getDayItems(day);
           const isToday = isSameDay(day, new Date());
           const isCurrentMonth = isSameMonth(day, currentDate);
+
+          const dayStatus = dayItems.reduce(
+            (acc, m) => {
+              const s = getMantivoMaintenanceStatus(m);
+              if (s === "overdue") acc.overdue++;
+              else if (s === "due") acc.due++;
+              else if (s === "done") acc.done++;
+              return acc;
+            },
+            { overdue: 0, due: 0, done: 0 }
+          );
           return (
             <div key={day.toISOString()} className={`min-h-[100px] border-r border-b border-slate-100 p-1 flex flex-col gap-1 ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} `}>
-              <div className={`text-[10px] font-bold p-1 rounded-md w-6 h-6 flex items-center justify-center ${isToday ? 'bg-blue-600 text-white shadow-sm' : isCurrentMonth ? 'text-slate-600' : 'text-slate-300'}`}>{format(day, 'd')}</div>
+              <div className={`text-[10px] font-bold p-1 rounded-md w-6 h-6 flex items-center justify-center `}>{format(day, "d")}</div>
+              <div className="mt-1 flex items-center gap-1 px-1">
+                {dayStatus.overdue > 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full animate-pulse"
+                    style={{ background: "rgb(var(--danger))" }}
+                    title={` vencida(s)`}
+                  />
+                ) : null}
+                {dayStatus.due > 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: "rgb(var(--warning))" }}
+                    title={` em dia`}
+                  />
+                ) : null}
+                {dayStatus.done > 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: "rgb(var(--success))" }}
+                    title={` concluída(s)`}
+                  />
+                ) : null}
+              </div>
               <div className="flex flex-col gap-1 overflow-y-auto max-h-[80px] scrollbar-none">{dayItems.map(item => (<MaintenanceCard key={item.id} item={item} condoName={getCondoName(item.condoId)} onClick={() => setSelectedItem(item)} />))}</div>
             </div>
           );

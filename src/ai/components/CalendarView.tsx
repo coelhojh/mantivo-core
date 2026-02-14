@@ -133,21 +133,21 @@ const CalendarView: React.FC = () => {
             { overdue: 0, due: 0, done: 0 }
           );
           return (
-            <div key={day.toISOString()} className={`min-h-[100px] border-r border-b border-slate-100 p-1 flex flex-col gap-1 ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} `}>
+            <div key={day.toISOString()} className={`min-h-[100px] border-r border-b border-slate-100 p-1 flex flex-col gap-1 ${!isCurrentMonth ? "bg-slate-50/50" : "bg-white"} ${isToday ? "ring-2 ring-[rgb(var(--primary)/0.25)] bg-[rgb(var(--primary)/0.06)] shadow-sm" : ""}`}>
               <div className={`text-[10px] font-bold p-1 rounded-md w-6 h-6 flex items-center justify-center `}>{format(day, "d")}</div>
               <div className="mt-1 flex items-center gap-1 px-1">
                 {dayStatus.overdue > 0 ? (
                   <span
                     className="h-1.5 w-1.5 rounded-full animate-pulse"
                     style={{ background: "rgb(var(--danger))" }}
-                    title={` vencida(s)`}
+                    title={`${dayStatus.overdue} vencida(s)`}
                   />
                 ) : null}
                 {dayStatus.due > 0 ? (
                   <span
                     className="h-1.5 w-1.5 rounded-full"
                     style={{ background: "rgb(var(--warning))" }}
-                    title={` em dia`}
+                    title={`${dayStatus.due} em dia`}
                   />
                 ) : null}
                 {dayStatus.done > 0 ? (

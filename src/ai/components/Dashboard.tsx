@@ -48,9 +48,7 @@ import { EmptyState } from "./ui/EmptyState";
 import { Skeleton } from "./ui/Skeleton";
 import { Reveal } from "./ui/Reveal";
 
-const cardBase =
-  "rounded-2xl bg-[rgb(var(--surface))] ring-1 ring-black/5 dark:ring-white/10 shadow-sm transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-md";
-
+const cardBase = "rounded-2xl bg-[rgb(var(--surface))] ring-1 ring-black/5 dark:ring-white/10 shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out will-change-transform hover:-translate-y-[1px] hover:ring-[rgb(var(--primary)/0.12)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)]";
 /* ============================================================================
    Helpers
 ============================================================================ */
@@ -277,7 +275,8 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+      <Reveal>
+        <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10">
             <span
@@ -346,8 +345,10 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      </Reveal>
       {/* KPI row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Reveal>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             label: "Total",
@@ -374,7 +375,7 @@ const Dashboard: React.FC = () => {
             color: "rgb(var(--success))",
           },
         ].map((kpi, i) => (
-          <div key={i} className={`${cardBase} p-5`}>
+          <div key={i} className={`${cardBase} p-5 hover:[transition-delay:0ms]`} style={{ transitionDelay: `${i * 60}ms` }}>
             <div className="flex justify-between gap-4">
               <div>
                 <p className="label-eyebrow">{kpi.label}</p>
@@ -385,9 +386,11 @@ const Dashboard: React.FC = () => {
           </div>
         ))}
       </div>
+      </Reveal>
 
       {/* Charts */}
-      <div className="grid gap-6 xl:grid-cols-3">
+      <Reveal>
+        <div className="grid gap-6 xl:grid-cols-3">
         <div className={`xl:col-span-2 ${cardBase} p-6`}>
           <div className="mb-3 flex items-end justify-between gap-4">
             <div>
@@ -463,9 +466,11 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      </Reveal>
 
       {/* Upcoming (ON_TIME) */}
-      <div className={`${cardBase} p-6`}>
+      <Reveal>
+        <div className={`${cardBase} p-6`}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold">Próximos ciclos (Em dia)</h3>
           <span className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--surface))] px-3 py-1 text-[11px] uppercase tracking-wide font-semibold text-black/70 dark:text-white/70 ring-1 ring-black/5 dark:ring-white/10">
@@ -483,7 +488,7 @@ const Dashboard: React.FC = () => {
               return (
                 <div
                   key={m.id}
-                  className="flex items-center gap-3 rounded-xl border border-black/10 p-3 transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-sm dark:border-white/10"
+                  className="flex items-center gap-3 rounded-xl border border-black/10 dark:border-white/10 bg-[rgb(var(--surface))] p-3 transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out will-change-transform hover:-translate-y-[1px] hover:ring-1 hover:ring-[rgb(var(--primary)/0.10)] hover:shadow-[0_10px_22px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_10px_22px_rgba(0,0,0,0.30)]"
                 >
                   <div className="w-14 text-center font-semibold text-[rgb(var(--primary))]">
                     {isValid(d) ? format(d, "dd/MM") : "--/--"}
@@ -507,6 +512,7 @@ const Dashboard: React.FC = () => {
           />
         )}
       </div>
+      </Reveal>
     </div>
   );
 };
